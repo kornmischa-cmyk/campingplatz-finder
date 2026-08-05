@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --bg-page: #e7e4da;
+  --bg-app: #12140f;
+  --bg-card: #1c2320;
+  --border: #2b3530;
+  --text-hi: #eef0ea;
+  --text-dim: #7d8a80;
+  --accent: #f4a35c;
+  --accent-green: #5c8a3a;
+  --petrol-text: #2c7a8c;
+  --petrol-bg: #16342f;
+  --danger: #c0453f;
+}
+
+@theme inline {
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-space-mono);
+}
+
+body {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+a {
+  color: var(--petrol-text);
+}
+a:hover {
+  color: var(--accent);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+}
