@@ -160,15 +160,12 @@ export default function Home() {
 
   return (
     <div
-      className="mx-auto my-9 relative overflow-hidden"
+      className="relative overflow-hidden w-full min-h-dvh sm:mx-auto sm:my-9 sm:w-[402px] sm:min-h-[850px] sm:rounded-[34px] sm:shadow-[0_30px_60px_rgba(0,0,0,.28)]"
       style={{
-        width: 402,
-        maxWidth: "100%",
         background: "var(--bg-app)",
-        borderRadius: 34,
-        boxShadow: "0 30px 60px rgba(0,0,0,.28)",
         color: "var(--text-hi)",
-        minHeight: 850,
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {loading ? (
