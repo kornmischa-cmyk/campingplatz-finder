@@ -13,6 +13,16 @@ Das Detail-Sheet lädt Fotos automatisch über die Google Places API (New) via `
 1. `cp .env.local.example .env.local`
 2. `GOOGLE_PLACES_API_KEY` mit einem Key eintragen, der die "Places API (New)" aktiviert hat.
 
+### Link-Analyse beim Hinzufügen neuer Plätze (Claude API)
+
+Im Add-Flow ("+"-Button) liest die App den eingefügten Link serverseitig via `/api/analyze-link` und lässt Claude (`claude-opus-5`) Name, Region, Übernachtungsart, Strom, Öko-Level und Anlass daraus vorschlagen. Ohne `ANTHROPIC_API_KEY` zeigt der Analyse-Schritt eine Fehlermeldung statt eines Vorschlags.
+
+`ANTHROPIC_API_KEY` in `.env.local` eintragen (Key aus der [Anthropic Console](https://console.anthropic.com/settings/keys)).
+
+### Persistenz
+
+Hinzugefügte/entfernte Plätze sowie Bewertungen und Statusänderungen (besucht/Wunsch) werden im `localStorage` des Browsers gespeichert und bleiben nach einem Reload erhalten. Es gibt aktuell kein Server-Backend — die Daten sind an das jeweilige Gerät/den jeweiligen Browser gebunden und werden z. B. beim Löschen der Browserdaten oder auf einem anderen Gerät nicht mitgenommen.
+
 ## Getting Started
 
 First, run the development server:

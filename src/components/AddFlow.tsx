@@ -1,17 +1,20 @@
 "use client";
 
+import { ANLASS_ALL } from "@/lib/places";
 import { NewPlaceDraft } from "@/lib/types";
 import { Chip, RowButton } from "./Chip";
 
 export function AddFlowStep1({
   addLink,
   addAnalyzing,
+  addError,
   onChangeLink,
   onCancel,
   onAnalyze,
 }: {
   addLink: string;
   addAnalyzing: boolean;
+  addError: string | null;
   onChangeLink: (v: string) => void;
   onCancel: () => void;
   onAnalyze: () => void;
@@ -40,6 +43,11 @@ export function AddFlowStep1({
         {addAnalyzing && (
           <div className="w-full box-border rounded-lg p-2.5 text-[11px]" style={{ background: "var(--petrol-bg)", color: "var(--petrol-text)" }}>
             ⏳ KI analysiert Link …
+          </div>
+        )}
+        {addError && !addAnalyzing && (
+          <div className="w-full box-border rounded-lg p-2.5 text-[11px]" style={{ border: "1px solid var(--danger)", color: "var(--danger)" }}>
+            {addError}
           </div>
         )}
         {!addAnalyzing && (
@@ -71,8 +79,6 @@ export function AddFlowStep2({
   onBack: () => void;
   onConfirm: () => void;
 }) {
-  const ANLASS_OPTIONS = ["Familie", "Öko", "Strand", "Wassersport"];
-
   return (
     <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-[18px] flex justify-between border-b" style={{ borderColor: "var(--border)" }}>
@@ -143,7 +149,7 @@ export function AddFlowStep2({
             ANLASS
           </div>
           <div className="flex gap-1.5 flex-wrap mt-1.5">
-            {ANLASS_OPTIONS.map((a) => (
+            {ANLASS_ALL.map((a) => (
               <Chip key={a} active={ext.anlass.includes(a)} onClick={() => onToggleAnlass(a)}>
                 {a}
               </Chip>

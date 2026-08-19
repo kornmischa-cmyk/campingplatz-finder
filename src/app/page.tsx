@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { INITIAL_PLACES, fmtH } from "@/lib/places";
+import { loadPlaces, savePlaces } from "@/lib/storage";
 import { NewPlaceDraft, Place, PhotoView, Status, StatusFilter, TypeFilter, ViewMode } from "@/lib/types";
 import { Chip } from "@/components/Chip";
 import { RadarView } from "@/components/RadarView";
@@ -12,18 +13,10 @@ import { DetailSheet } from "@/components/DetailSheet";
 import { AddFlowStep1, AddFlowStep2 } from "@/components/AddFlow";
 
 const DEFAULT_TYPES: TypeFilter = { zelt: true, wowa: true, haus: true, trek: false };
-const DEFAULT_DRAFT: NewPlaceDraft = {
-  name: "Neuer Platz an der Lahn",
-  region: "Lahntal, Hessen",
-  types: { zelt: true, wowa: false, haus: false, trek: false },
-  strom: "ja",
-  eco: 2,
-  anlass: ["Familie"],
-};
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
-  const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
+  const [places, setPlaces] = useState<Place[]>(() => loadPlaces() ?? INITIAL_PLACES);
   const [maxHours, setMaxHours] = useState(2);
   const [types, setTypes] = useState<TypeFilter>(DEFAULT_TYPES);
   const [ecoMin, setEcoMin] = useState(0);
@@ -37,6 +30,7 @@ export default function Home() {
   const [addStep, setAddStep] = useState<0 | 1 | 2>(0);
   const [addLink, setAddLink] = useState("");
   const [addAnalyzing, setAddAnalyzing] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [ext, setExt] = useState<NewPlaceDraft | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -44,6 +38,15 @@ export default function Home() {
     const t = setTimeout(() => setLoading(false), 900);
     return () => clearTimeout(t);
   }, []);
+
+  // Persist every change (added/removed places, ratings, status changes).
+  // Safe re: hydration — the loading skeleton shown for the first 900ms
+  // doesn't depend on `places`, so an initial-state difference between
+  // server (no localStorage) and client (may have stored data) never
+  // produces mismatched markup.
+  useEffect(() => {
+    savePlaces(places);
+  }, [places]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -116,16 +119,41 @@ export default function Home() {
     setAddStep(1);
     setAddLink("");
     setAddAnalyzing(false);
+    setAddError(null);
     setExt(null);
   }
 
-  function analyzeLink() {
+  async function analyzeLink() {
+    if (!addLink.trim()) {
+      setAddError("Bitte einen Link einfügen.");
+      return;
+    }
     setAddAnalyzing(true);
-    setTimeout(() => {
-      setAddAnalyzing(false);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/analyze-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: addLink.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Analyse fehlgeschlagen");
+      }
+      setExt({
+        name: data.name,
+        region: data.region,
+        types: { ...data.types, trek: false },
+        strom: data.strom,
+        eco: data.eco,
+        anlass: data.anlass,
+      });
       setAddStep(2);
-      setExt(DEFAULT_DRAFT);
-    }, 1100);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Analyse fehlgeschlagen");
+    } finally {
+      setAddAnalyzing(false);
+    }
   }
 
   function confirmAdd() {
@@ -354,6 +382,7 @@ export default function Home() {
         <AddFlowStep1
           addLink={addLink}
           addAnalyzing={addAnalyzing}
+          addError={addError}
           onChangeLink={setAddLink}
           onCancel={() => setAddStep(0)}
           onAnalyze={analyzeLink}
