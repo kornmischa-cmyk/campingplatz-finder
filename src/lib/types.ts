@@ -32,7 +32,7 @@ export interface TypeFilter {
   trek: boolean;
 }
 
-export type ViewMode = "radar" | "karte";
+export type ViewMode = "radar" | "liste";
 export type PhotoView = "fotos" | "maps";
 export type StatusFilter = "alle" | "besucht" | "wunsch";
 
@@ -43,4 +43,9 @@ export interface NewPlaceDraft {
   strom: Strom;
   eco: 1 | 2 | 3;
   anlass: string[];
+}
+
+export interface EditPlaceDraft extends NewPlaceDraft {
+  hours: number;
+  bearing: number;
 }

@@ -66,6 +66,7 @@ export function DetailSheet({
   onMarkVisited,
   onBackToWish,
   onRemove,
+  onEdit,
 }: {
   place: Place;
   photoView: "fotos" | "maps";
@@ -75,6 +76,7 @@ export function DetailSheet({
   onMarkVisited: () => void;
   onBackToWish: () => void;
   onRemove: () => void;
+  onEdit: () => void;
 }) {
   const { data: photos, loading } = usePlacePhotos(place);
   const googleImagesUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(place.name + " " + place.region)}`;
@@ -255,6 +257,9 @@ export function DetailSheet({
       <div className="px-5 py-4 border-t flex flex-col gap-2" style={{ borderColor: "var(--border)" }}>
         <RowButton variant="solid" href={place.link}>
           Zur Website ↗
+        </RowButton>
+        <RowButton variant="outline" onClick={onEdit}>
+          Bearbeiten
         </RowButton>
         {place.status === "besucht" && (
           <RowButton variant="outline" onClick={onBackToWish}>

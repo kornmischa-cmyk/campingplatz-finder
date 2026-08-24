@@ -3,16 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { INITIAL_PLACES, fmtH } from "@/lib/places";
 import { loadPlaces, savePlaces } from "@/lib/storage";
-import { NewPlaceDraft, Place, PhotoView, Status, StatusFilter, TypeFilter, ViewMode } from "@/lib/types";
+import { EditPlaceDraft, NewPlaceDraft, Place, PhotoView, Status, StatusFilter, TypeFilter, ViewMode } from "@/lib/types";
 import { Chip } from "@/components/Chip";
 import { RadarView } from "@/components/RadarView";
-import { MapView } from "@/components/MapView";
+import { PlacesListView } from "@/components/PlacesListView";
 import { ResultsList } from "@/components/ResultsList";
 import { FilterSheet } from "@/components/FilterSheet";
 import { DetailSheet } from "@/components/DetailSheet";
+import { EditPlaceSheet } from "@/components/EditPlaceSheet";
 import { AddFlowStep1, AddFlowStep2 } from "@/components/AddFlow";
 
 const DEFAULT_TYPES: TypeFilter = { zelt: true, wowa: true, haus: true, trek: false };
+const DEFAULT_TYPES_ALL: TypeFilter = { zelt: true, wowa: true, haus: true, trek: true };
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
@@ -24,6 +26,9 @@ export default function Home() {
   const [status, setStatus] = useState<StatusFilter>("alle");
   const [trekException, setTrekException] = useState(false);
   const [view, setView] = useState<ViewMode>("radar");
+  const [listTypes, setListTypes] = useState<TypeFilter>(DEFAULT_TYPES_ALL);
+  const [listStatus, setListStatus] = useState<StatusFilter>("alle");
+  const [listSearch, setListSearch] = useState("");
   const [photoView, setPhotoView] = useState<PhotoView>("fotos");
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -32,6 +37,8 @@ export default function Home() {
   const [addAnalyzing, setAddAnalyzing] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [ext, setExt] = useState<NewPlaceDraft | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<EditPlaceDraft | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +62,6 @@ export default function Home() {
 
   const eligible = useMemo(() => {
     return places.filter((p) => {
-      if (p.strom === "unklar") return false;
       if (p.strom === "nein") {
         if (!(p.stromException && trekException && types.trek)) return false;
       }
@@ -81,6 +87,10 @@ export default function Home() {
 
   function toggleType(t: keyof TypeFilter) {
     setTypes((s) => ({ ...s, [t]: !s[t] }));
+  }
+
+  function toggleListType(t: keyof TypeFilter) {
+    setListTypes((s) => ({ ...s, [t]: !s[t] }));
   }
 
   function resetFilters() {
@@ -113,6 +123,57 @@ export default function Home() {
     setPlaces((ps) => ps.filter((x) => x.id !== id));
     setDetailId(null);
     if (p) showToast(`${p.name} entfernt`);
+  }
+
+  function startEdit(place: Place) {
+    setEditDraft({
+      name: place.name,
+      region: place.region,
+      types: {
+        zelt: place.types.includes("zelt"),
+        wowa: place.types.includes("wowa"),
+        haus: place.types.includes("haus"),
+        trek: place.types.includes("trek"),
+      },
+      strom: place.strom,
+      eco: place.eco === 0 ? 1 : place.eco,
+      anlass: place.anlass,
+      hours: place.hours,
+      bearing: place.bearing,
+    });
+    setEditId(place.id);
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setEditDraft(null);
+  }
+
+  function confirmEdit() {
+    if (editId == null || !editDraft) return;
+    const activeTypes = (Object.entries(editDraft.types) as [keyof TypeFilter, boolean][])
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    setPlaces((ps) =>
+      ps.map((p) =>
+        p.id === editId
+          ? {
+              ...p,
+              name: editDraft.name,
+              region: editDraft.region,
+              types: activeTypes.length ? activeTypes : ["zelt"],
+              strom: editDraft.strom,
+              eco: editDraft.eco,
+              anlass: editDraft.anlass,
+              hours: editDraft.hours,
+              bearing: editDraft.bearing,
+            }
+          : p
+      )
+    );
+    showToast("Änderungen gespeichert");
+    setEditId(null);
+    setEditDraft(null);
   }
 
   function startAdd() {
@@ -282,8 +343,8 @@ export default function Home() {
               <Chip activeColor="var(--accent)" active={view === "radar"} onClick={() => setView("radar")}>
                 Radar
               </Chip>
-              <Chip activeColor="var(--accent)" active={view === "karte"} onClick={() => setView("karte")}>
-                Karte
+              <Chip activeColor="var(--accent)" active={view === "liste"} onClick={() => setView("liste")}>
+                Liste
               </Chip>
             </div>
           </div>
@@ -294,48 +355,60 @@ export default function Home() {
               <div className="px-5 pt-2 text-[9px] text-center" style={{ color: "#4a564f" }}>
                 ⚠︎ Fahrzeiten geschätzt · Ring = Fahrzeit, Winkel = Himmelsrichtung
               </div>
+
+              <div className="px-5 pt-4 flex gap-2 flex-wrap">
+                <Chip active={types.zelt} onClick={() => toggleType("zelt")}>
+                  <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 3l9 18H3z" />
+                  </svg>
+                  Zelt
+                </Chip>
+                <Chip active={types.wowa} onClick={() => toggleType("wowa")}>
+                  <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="9" width="16" height="8" rx="2" />
+                    <circle cx="6" cy="19" r="1.5" />
+                    <circle cx="15" cy="19" r="1.5" />
+                  </svg>
+                  Wowa
+                </Chip>
+                <Chip active={types.haus} onClick={() => toggleType("haus")}>
+                  <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 11l8-6 8 6v9H4z" />
+                  </svg>
+                  Haus
+                </Chip>
+                <Chip active={types.trek} onClick={() => toggleType("trek")}>
+                  <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 20l4-9 3 4 3-7 4 12" />
+                  </svg>
+                  Trekking
+                </Chip>
+              </div>
+
+              <ResultsList
+                results={inRange}
+                resultCount={inRange.length}
+                maxHoursLabel={fmtH(maxHours)}
+                nearestOutside={nearestOutside}
+                onOpen={setDetailId}
+                onJumpToNearest={() => nearestOutside && setMaxHours(nearestOutside.hours)}
+                onResetFilters={resetFilters}
+              />
             </>
           )}
-          {view === "karte" && <MapView />}
 
-          <div className="px-5 pt-4 flex gap-2 flex-wrap">
-            <Chip active={types.zelt} onClick={() => toggleType("zelt")}>
-              <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 3l9 18H3z" />
-              </svg>
-              Zelt
-            </Chip>
-            <Chip active={types.wowa} onClick={() => toggleType("wowa")}>
-              <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="9" width="16" height="8" rx="2" />
-                <circle cx="6" cy="19" r="1.5" />
-                <circle cx="15" cy="19" r="1.5" />
-              </svg>
-              Wowa
-            </Chip>
-            <Chip active={types.haus} onClick={() => toggleType("haus")}>
-              <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 11l8-6 8 6v9H4z" />
-              </svg>
-              Haus
-            </Chip>
-            <Chip active={types.trek} onClick={() => toggleType("trek")}>
-              <svg className="inline-flex flex-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 20l4-9 3 4 3-7 4 12" />
-              </svg>
-              Trekking
-            </Chip>
-          </div>
-
-          <ResultsList
-            results={inRange}
-            resultCount={inRange.length}
-            maxHoursLabel={fmtH(maxHours)}
-            nearestOutside={nearestOutside}
-            onOpen={setDetailId}
-            onJumpToNearest={() => nearestOutside && setMaxHours(nearestOutside.hours)}
-            onResetFilters={resetFilters}
-          />
+          {view === "liste" && (
+            <PlacesListView
+              places={places}
+              types={listTypes}
+              status={listStatus}
+              search={listSearch}
+              onSearchChange={setListSearch}
+              onToggleType={toggleListType}
+              onSetStatus={setListStatus}
+              onOpen={setDetailId}
+            />
+          )}
 
           <div
             onClick={startAdd}
@@ -375,6 +448,26 @@ export default function Home() {
           onMarkVisited={() => markVisited(detail.id)}
           onBackToWish={() => backToWish(detail.id)}
           onRemove={() => removePlace(detail.id)}
+          onEdit={() => startEdit(detail)}
+        />
+      )}
+
+      {editId != null && editDraft && (
+        <EditPlaceSheet
+          draft={editDraft}
+          onChangeField={(field, value) => setEditDraft((s) => (s ? { ...s, [field]: value } : s))}
+          onToggleType={(t) => setEditDraft((s) => (s ? { ...s, types: { ...s.types, [t]: !s.types[t] } } : s))}
+          onSetStrom={(v) => setEditDraft((s) => (s ? { ...s, strom: v } : s))}
+          onSetEco={(v) => setEditDraft((s) => (s ? { ...s, eco: v } : s))}
+          onToggleAnlass={(a) =>
+            setEditDraft((s) =>
+              s ? { ...s, anlass: s.anlass.includes(a) ? s.anlass.filter((x) => x !== a) : [...s.anlass, a] } : s
+            )
+          }
+          onSetHours={(h) => setEditDraft((s) => (s ? { ...s, hours: h } : s))}
+          onSetBearing={(deg) => setEditDraft((s) => (s ? { ...s, bearing: deg } : s))}
+          onCancel={cancelEdit}
+          onSave={confirmEdit}
         />
       )}
 
