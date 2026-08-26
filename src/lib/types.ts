@@ -43,6 +43,8 @@ export interface NewPlaceDraft {
   strom: Strom;
   eco: 1 | 2 | 3;
   anlass: string[];
+  status: Status;
+  rating: number | null;
 }
 
 export interface EditPlaceDraft extends NewPlaceDraft {

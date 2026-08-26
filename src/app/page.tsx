@@ -138,6 +138,8 @@ export default function Home() {
       strom: place.strom,
       eco: place.eco === 0 ? 1 : place.eco,
       anlass: place.anlass,
+      status: place.status,
+      rating: place.rating,
       hours: place.hours,
       bearing: place.bearing,
     });
@@ -208,6 +210,8 @@ export default function Home() {
         strom: data.strom,
         eco: data.eco,
         anlass: data.anlass,
+        status: "wunsch",
+        rating: null,
       });
       setAddStep(2);
     } catch (err) {
@@ -226,14 +230,14 @@ export default function Home() {
       id: Math.max(0, ...places.map((p) => p.id)) + 1,
       name: ext.name,
       region: ext.region,
-      status: "wunsch",
+      status: ext.status,
       types: activeTypes.length ? activeTypes : ["zelt"],
       hours: 1.5,
       bearing: 120,
       eco: ext.eco,
       strom: ext.strom,
       anlass: ext.anlass,
-      rating: null,
+      rating: ext.status === "besucht" ? ext.rating : null,
       link: addLink,
       note: "",
       price: "",
@@ -492,6 +496,8 @@ export default function Home() {
           onToggleAnlass={(a) =>
             setExt((s) => (s ? { ...s, anlass: s.anlass.includes(a) ? s.anlass.filter((x) => x !== a) : [...s.anlass, a] } : s))
           }
+          onSetStatus={(v) => setExt((s) => (s ? { ...s, status: v } : s))}
+          onSetRating={(n) => setExt((s) => (s ? { ...s, rating: n } : s))}
           onBack={() => setAddStep(1)}
           onConfirm={confirmAdd}
         />

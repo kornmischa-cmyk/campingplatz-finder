@@ -67,6 +67,8 @@ export function AddFlowStep2({
   onSetStrom,
   onSetEco,
   onToggleAnlass,
+  onSetStatus,
+  onSetRating,
   onBack,
   onConfirm,
 }: {
@@ -76,6 +78,8 @@ export function AddFlowStep2({
   onSetStrom: (v: "ja" | "nein" | "unklar") => void;
   onSetEco: (v: 1 | 2 | 3) => void;
   onToggleAnlass: (a: string) => void;
+  onSetStatus: (v: "wunsch" | "besucht") => void;
+  onSetRating: (n: number) => void;
   onBack: () => void;
   onConfirm: () => void;
 }) {
@@ -156,10 +160,38 @@ export function AddFlowStep2({
             ))}
           </div>
         </div>
+        <div className="pt-2" style={{ borderTop: "1px dashed var(--border)" }}>
+          <div className="text-[9px] tracking-[1px] mt-3.5" style={{ color: "var(--text-dim)" }}>
+            STATUS
+          </div>
+          <div className="flex gap-2 mt-1.5">
+            <Chip active={ext.status === "wunsch"} onClick={() => onSetStatus("wunsch")}>✎ Wunsch</Chip>
+            <Chip active={ext.status === "besucht"} onClick={() => onSetStatus("besucht")}>★ besucht</Chip>
+          </div>
+        </div>
+        {ext.status === "besucht" && (
+          <div>
+            <div className="text-[9px] tracking-[1px]" style={{ color: "var(--text-dim)" }}>
+              BEWERTUNG (OPTIONAL)
+            </div>
+            <div className="flex gap-1 mt-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <div
+                  key={n}
+                  onClick={() => onSetRating(n)}
+                  className="text-[22px] cursor-pointer"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {n <= (ext.rating || 0) ? "★" : "☆"}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="px-5 py-4 border-t" style={{ borderColor: "var(--border)" }}>
         <RowButton variant="solid" onClick={onConfirm}>
-          Zum Pool hinzufügen (als Wunsch)
+          {ext.status === "besucht" ? "Zum Pool hinzufügen (als besucht)" : "Zum Pool hinzufügen (als Wunsch)"}
         </RowButton>
       </div>
     </div>
