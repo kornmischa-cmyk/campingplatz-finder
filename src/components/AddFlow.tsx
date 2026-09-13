@@ -69,6 +69,7 @@ export function AddFlowStep2({
   onToggleAnlass,
   onSetStatus,
   onSetRating,
+  onSetHours,
   onBack,
   onConfirm,
 }: {
@@ -80,6 +81,7 @@ export function AddFlowStep2({
   onToggleAnlass: (a: string) => void;
   onSetStatus: (v: "wunsch" | "besucht") => void;
   onSetRating: (n: number) => void;
+  onSetHours: (h: number) => void;
   onBack: () => void;
   onConfirm: () => void;
 }) {
@@ -116,6 +118,21 @@ export function AddFlowStep2({
             style={{ border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-hi)" }}
             value={ext.region}
             onChange={(e) => onChangeField("region", e.target.value)}
+          />
+        </div>
+        <div>
+          <div className="text-[9px] tracking-[1px]" style={{ color: "var(--text-dim)" }}>
+            FAHRZEIT (H) {ext.hours == null && "— konnte nicht automatisch berechnet werden"}
+          </div>
+          <input
+            type="number"
+            min={0.25}
+            max={12}
+            step={0.25}
+            className="w-full box-border mt-[5px] rounded-lg px-[11px] py-[11px] text-[13px]"
+            style={{ border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-hi)" }}
+            value={ext.hours ?? 1.5}
+            onChange={(e) => onSetHours(parseFloat(e.target.value) || 0)}
           />
         </div>
         <div>

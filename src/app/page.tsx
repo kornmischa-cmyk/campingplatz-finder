@@ -212,7 +212,12 @@ export default function Home() {
         anlass: data.anlass,
         status: "wunsch",
         rating: null,
+        hours: typeof data.hours === "number" ? data.hours : undefined,
+        bearing: typeof data.bearing === "number" ? data.bearing : undefined,
       });
+      if (typeof data.hours !== "number") {
+        showToast("Fahrzeit konnte nicht ermittelt werden — bitte manuell prüfen");
+      }
       setAddStep(2);
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Analyse fehlgeschlagen");
@@ -232,8 +237,8 @@ export default function Home() {
       region: ext.region,
       status: ext.status,
       types: activeTypes.length ? activeTypes : ["zelt"],
-      hours: 1.5,
-      bearing: 120,
+      hours: ext.hours ?? 1.5,
+      bearing: ext.bearing ?? 120,
       eco: ext.eco,
       strom: ext.strom,
       anlass: ext.anlass,
@@ -253,7 +258,7 @@ export default function Home() {
 
   return (
     <div
-      className="relative overflow-hidden w-full min-h-dvh sm:mx-auto sm:my-9 sm:w-[402px] sm:min-h-[850px] sm:rounded-[34px] sm:shadow-[0_30px_60px_rgba(0,0,0,.28)]"
+      className="relative overflow-hidden w-full h-dvh sm:mx-auto sm:my-9 sm:h-[850px] sm:w-[402px] sm:rounded-[34px] sm:shadow-[0_30px_60px_rgba(0,0,0,.28)]"
       style={{
         background: "var(--bg-app)",
         color: "var(--text-hi)",
@@ -261,6 +266,7 @@ export default function Home() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
+      <div className="absolute inset-0 overflow-y-auto">
       {loading ? (
         <div className="p-[22px] flex flex-col gap-3.5">
           <div className="h-3.5 w-1/2 rounded" style={{ background: "var(--bg-card)" }} />
@@ -413,14 +419,17 @@ export default function Home() {
               onOpen={setDetailId}
             />
           )}
+        </div>
+      )}
+      </div>
 
-          <div
-            onClick={startAdd}
-            className="absolute right-4 bottom-4 w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold cursor-pointer z-2"
-            style={{ background: "var(--accent)", color: "#161b18", boxShadow: "0 8px 20px rgba(244,163,92,.4)" }}
-          >
-            +
-          </div>
+      {!loading && (
+        <div
+          onClick={startAdd}
+          className="absolute right-4 bottom-4 w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold cursor-pointer z-2"
+          style={{ background: "var(--accent)", color: "#161b18", boxShadow: "0 8px 20px rgba(244,163,92,.4)" }}
+        >
+          +
         </div>
       )}
 
@@ -498,6 +507,7 @@ export default function Home() {
           }
           onSetStatus={(v) => setExt((s) => (s ? { ...s, status: v } : s))}
           onSetRating={(n) => setExt((s) => (s ? { ...s, rating: n } : s))}
+          onSetHours={(h) => setExt((s) => (s ? { ...s, hours: h } : s))}
           onBack={() => setAddStep(1)}
           onConfirm={confirmAdd}
         />

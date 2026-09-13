@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { ANLASS_ALL } from "@/lib/places";
+import { estimateDrive } from "@/lib/drive-estimate";
 
 const MAX_PAGE_CHARS = 15000;
 
@@ -11,6 +12,8 @@ interface AnalyzeResult {
   strom: "ja" | "nein" | "unklar";
   eco: 1 | 2 | 3;
   anlass: string[];
+  hours: number | null;
+  bearing: number | null;
 }
 
 function stripHtml(html: string): string {
@@ -88,9 +91,15 @@ export async function POST(req: NextRequest) {
 
     const parsed = extractJson(textBlock.text) as Partial<AnalyzeResult>;
 
+    const name = typeof parsed.name === "string" && parsed.name ? parsed.name : "Unbenannter Platz";
+    const region = typeof parsed.region === "string" ? parsed.region : "";
+
+    const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+    const drive = placesKey ? await estimateDrive(placesKey, `${name} ${region}`) : null;
+
     const result: AnalyzeResult = {
-      name: typeof parsed.name === "string" && parsed.name ? parsed.name : "Unbenannter Platz",
-      region: typeof parsed.region === "string" ? parsed.region : "",
+      name,
+      region,
       types: {
         zelt: !!parsed.types?.zelt,
         wowa: !!parsed.types?.wowa,
@@ -99,6 +108,8 @@ export async function POST(req: NextRequest) {
       strom: parsed.strom === "ja" || parsed.strom === "nein" ? parsed.strom : "unklar",
       eco: parsed.eco === 1 || parsed.eco === 2 || parsed.eco === 3 ? parsed.eco : 1,
       anlass: Array.isArray(parsed.anlass) ? parsed.anlass.filter((a): a is string => ANLASS_ALL.includes(a as (typeof ANLASS_ALL)[number])) : [],
+      hours: drive?.hours ?? null,
+      bearing: drive?.bearing ?? null,
     };
 
     return NextResponse.json(result);

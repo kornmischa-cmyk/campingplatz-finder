@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ANLASS_ALL } from "@/lib/places";
 import { EditPlaceDraft } from "@/lib/types";
 import { Chip, RowButton } from "./Chip";
@@ -38,6 +39,29 @@ export function EditPlaceSheet({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const [recalcState, setRecalcState] = useState<"idle" | "loading" | "error">("idle");
+  const [recalcError, setRecalcError] = useState<string | null>(null);
+
+  async function recalcDrive() {
+    setRecalcState("loading");
+    setRecalcError(null);
+    try {
+      const res = await fetch("/api/estimate-drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: draft.name, region: draft.region }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Fehlgeschlagen");
+      onSetHours(data.hours);
+      onSetBearing(data.bearing);
+      setRecalcState("idle");
+    } catch (err) {
+      setRecalcState("error");
+      setRecalcError(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
+
   return (
     <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-[18px] flex justify-between border-b" style={{ borderColor: "var(--border)" }}>
@@ -70,7 +94,7 @@ export function EditPlaceSheet({
             onChange={(e) => onChangeField("region", e.target.value)}
           />
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-end">
           <div className="flex-1">
             <div className="text-[9px] tracking-[1px]" style={{ color: "var(--text-dim)" }}>
               FAHRZEIT (H)
@@ -86,7 +110,26 @@ export function EditPlaceSheet({
               onChange={(e) => onSetHours(parseFloat(e.target.value) || 0)}
             />
           </div>
+          <button
+            type="button"
+            onClick={recalcDrive}
+            disabled={recalcState === "loading"}
+            className="rounded-lg px-3 text-[11px] whitespace-nowrap"
+            style={{
+              border: "1px solid var(--accent)",
+              color: "var(--accent)",
+              height: 40,
+              opacity: recalcState === "loading" ? 0.6 : 1,
+            }}
+          >
+            {recalcState === "loading" ? "Berechne …" : "Neu berechnen"}
+          </button>
         </div>
+        {recalcState === "error" && recalcError && (
+          <div className="text-[10px]" style={{ color: "var(--danger)" }}>
+            {recalcError}
+          </div>
+        )}
         <div>
           <div className="text-[9px] tracking-[1px]" style={{ color: "var(--text-dim)" }}>
             HIMMELSRICHTUNG (RADAR-POSITION)

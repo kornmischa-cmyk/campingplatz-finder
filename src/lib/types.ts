@@ -45,6 +45,8 @@ export interface NewPlaceDraft {
   anlass: string[];
   status: Status;
   rating: number | null;
+  hours?: number;
+  bearing?: number;
 }
 
 export interface EditPlaceDraft extends NewPlaceDraft {
