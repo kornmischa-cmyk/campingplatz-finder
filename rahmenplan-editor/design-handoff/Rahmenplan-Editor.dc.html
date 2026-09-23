@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:wght@400;500;600&display=swap" />
+<style>
+body{margin:0}
+a{color:#7d5411}
+a:hover{color:#8a1f14}
+</style>
+</helmet>
+<div style="background:#f8f4f4;border:1px solid #d7d3d3;margin:10px;color:#201f1d;font:13px/1.5 'Lora',serif" data-screen-label="Rahmenplan-Editor">
+
+<div style="padding:14px 20px;border-bottom:1px solid #eae7e7">
+<h1 style="font:italic 600 21px/1.1 'Cormorant Garamond',serif;margin:0 0 3px">Rahmenplan bearbeiten</h1>
+<div style="font-size:11.5px;color:#605d5d">Kita Sonnenblume (fiktiv) · Öffnung Mo–Fr 7:00–16:30 · 62 Kinder · 15 planbare Personen · 307 Wochenstunden</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid #eae7e7">
+<span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-right:2px">Ansicht</span>
+<sc-for list="{{ viewButtons }}" as="vb" hint-placeholder-count="2">
+<button style="{{ vb.style }}" onClick="{{ vb.onClick }}" aria-pressed="{{ vb.pressed }}">{{ vb.label }}</button>
+</sc-for>
+</div>
+
+<sc-if value="{{ isPersonalView }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px 20px">
+<sc-for list="{{ personalGroups }}" as="pg" hint-placeholder-count="3">
+<div style="margin-bottom:18px">
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;border-bottom:1px solid #d7d3d3;padding-bottom:4px;margin-bottom:8px">{{ pg.name }}</div>
+<sc-for list="{{ pg.people }}" as="pp" hint-placeholder-count="4">
+<button onClick="{{ pp.onOpen }}" style="display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:#fff;border:1px solid #eae7e7;border-radius:3px;padding:9px 12px;margin-bottom:6px;cursor:pointer;font:inherit">
+<span><strong style="font-size:12.5px;color:#201f1d">{{ pp.nm }}</strong><br /><span style="font-size:10.5px;color:#605d5d">{{ pp.qual }} · Soll {{ pp.soll }} h/Wo</span></span>
+<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:{{ pp.fkColor }};border:1px solid {{ pp.fkColor }};padding:2px 6px;border-radius:2px">{{ pp.fkLabel }}</span>
+</button>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPlanView }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid #eae7e7">
+<span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-right:2px">Fassung</span>
+<sc-for list="{{ fassungButtons }}" as="fb" hint-placeholder-count="2">
+<button style="{{ fb.style }}" onClick="{{ fb.onClick }}" aria-pressed="{{ fb.pressed }}">{{ fb.label }}</button>
+</sc-for>
+<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px dashed #d7d3d3;padding:5px 10px;cursor:pointer;color:#6b6767" disabled="{{ true }}">+ Neue Testfassung</button>
+<button style="{{ applyButtonStyle }}" onClick="{{ applyTestVersion }}" disabled="{{ applyDisabled }}">Als geltend übernehmen</button>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid #eae7e7" role="group" aria-label="Wochentag">
+<span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-right:2px">Tag</span>
+<sc-for list="{{ dayButtons }}" as="db" hint-placeholder-count="5">
+<button style="{{ db.style }}" onClick="{{ db.onClick }}" aria-pressed="{{ db.pressed }}" aria-label="{{ db.aria }}" title="{{ db.aria }}"><span style="display:inline-flex;align-items:center;gap:7px">{{ db.label }}<span aria-hidden="true" style="{{ db.markStyle }}">{{ db.mark }}</span></span></button>
+</sc-for>
+<span aria-hidden="true" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-left:10px;font-size:10.5px;color:#605d5d">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;background:#8a1f14;color:#fff">3</span>Anzahl Regelverstöße</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;background:#f2e6cf;color:#7d5411;border:1px solid #b68235">!</span>nur Hinweise</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;background:#e3eee0;color:#2c6b2f;border:1px solid #9cc09a">✓</span>alles in Ordnung</span>
+</span>
+</div>
+
+<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+<div style="min-width:720px;padding:14px 20px 10px">
+
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+<h2 style="font:600 19px/1.1 'Cormorant Garamond',serif;margin:0">Rahmenplan · {{ day }}</h2>
+<span style="font:italic 400 12px/1 'Cormorant Garamond',serif;color:#7d5411">{{ variantLabel }}</span>
+</div>
+
+<div style="display:grid;grid-template-columns:160px 1fr">
+<div></div>
+<div style="position:relative;height:18px">
+<sc-for list="{{ ticks }}" as="tk" hint-placeholder-count="10">
+<span style="position:absolute;font-size:10.5px;color:#6b6767;transform:translateX(-50%);left:{{ tk.left }}%">{{ tk.label }}</span>
+</sc-for>
+</div>
+</div>
+
+<sc-for list="{{ groups }}" as="grp" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:160px 1fr;border-bottom:1px solid #eae7e7">
+<div style="grid-column:1/-1;padding:9px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;border-bottom:1px solid #d7d3d3">{{ grp.name }}</div>
+</div>
+<div style="display:grid;grid-template-columns:160px 1fr">
+<div></div>
+<div style="position:relative;height:7px;margin:3px 0">
+<sc-for list="{{ violationSpans }}" as="vs" hint-placeholder-count="2">
+<div style="position:absolute;top:0;height:7px;left:{{ vs.left }}%;width:{{ vs.width }}%;background:#8a1f14;border-radius:1px" title="{{ vs.title }}"></div>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{ grp.persons }}" as="p" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:160px 1fr;border-bottom:1px solid #eae7e7">
+<div style="padding:7px 8px 7px 0;border-right:1px solid #eae7e7">
+<button onClick="{{ p.onOpenProfile }}" style="font-weight:600;font-size:12.5px;background:transparent;border:none;padding:0;cursor:pointer;color:#201f1d;text-align:left;text-decoration:underline;text-decoration-color:#d7d3d3;font-family:inherit">{{ p.nm }}</button>
+<div style="font-size:10.5px;color:#605d5d">{{ p.meta }}</div>
+</div>
+<div data-timeline="1" style="position:relative;height:38px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),#eae7e7 calc(10% - 1px),#eae7e7 10%)">
+<sc-for list="{{ p.blocks }}" as="b" hint-placeholder-count="3">
+<div style="{{ b.style }}" onPointerDown="{{ b.onDown }}" onKeyDown="{{ b.onKey }}" onFocus="{{ b.onFocus }}" tabIndex="{{ b.tabIndex }}" role="{{ b.role }}" aria-label="{{ b.aria }}" title="{{ b.tooltip }}" style-focus="outline:2px solid #201f1d;outline-offset:1px">
+<span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none">{{ b.label }}</span>
+<sc-if value="{{ b.resizable }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ b.onDownL }}" title="Beginn ziehen" aria-hidden="true" style="position:absolute;left:-1px;top:-1px;bottom:-1px;width:10px;cursor:ew-resize;display:flex;align-items:center;justify-content:center"><div style="width:2px;height:12px;border-radius:1px;background:#7d5411;pointer-events:none"></div></div><div onPointerDown="{{ b.onDownR }}" title="Ende ziehen" aria-hidden="true" style="position:absolute;right:-1px;top:-1px;bottom:-1px;width:10px;cursor:ew-resize;display:flex;align-items:center;justify-content:center"><div style="width:2px;height:12px;border-radius:1px;background:#7d5411;pointer-events:none"></div></div></sc-if>
+<sc-if value="{{ b.showBadge }}" hint-placeholder-val="{{ false }}"><div aria-hidden="true" style="position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#201f1d;color:#f8f4f4;font-size:11px;font-weight:600;line-height:1;padding:4px 7px;border-radius:2px;white-space:nowrap;pointer-events:none;z-index:6">{{ b.badge }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</sc-for>
+
+<div style="border-top:1px solid #d7d3d3;padding-top:8px;margin-top:2px">
+<div style="display:grid;grid-template-columns:160px 1fr;margin-bottom:6px">
+<h3 style="margin:0;font-size:11.5px;font-weight:600">Abdeckung</h3>
+<div style="font-size:10.5px;color:#605d5d;text-wrap:pretty">Wie viele Personen in der Betreuung eingeplant sind, je Viertelstunde (Zahl alle 30 Min.). Pausen, Besprechungen und Verfügungszeit zählen nicht mit.</div>
+</div>
+<div style="display:grid;grid-template-columns:160px 1fr;align-items:center">
+<div style="font-size:11px;padding-right:8px">Personen gesamt</div>
+<div style="position:relative;height:20px;display:flex" aria-label="Betreuende Personen je Zeitabschnitt">
+<sc-for list="{{ covTotal }}" as="c" hint-placeholder-count="20">
+<div style="{{ c.style }}" title="{{ c.title }}">{{ c.label }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:160px 1fr;align-items:center;margin-top:2px">
+<div style="font-size:11px;padding-right:8px">davon Fachkräfte</div>
+<div style="position:relative;height:20px;display:flex" aria-label="Davon Fachkräfte je Zeitabschnitt">
+<sc-for list="{{ covFk }}" as="c" hint-placeholder-count="20">
+<div style="{{ c.style }}" title="{{ c.title }}">{{ c.label }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:160px 1fr;margin-top:6px">
+<div></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:#605d5d">
+<span style="display:inline-flex;align-items:center;gap:5px"><i style="display:inline-block;width:16px;height:11px;background:#eae7e7"></i>Mindestbesetzung erfüllt</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><i style="display:inline-block;width:16px;height:11px;background:#f3d9d6;border:1px solid #8a1f14;box-sizing:border-box"></i>unterschritten: mind. 1 Fachkraft durchgehend · Früh-/Spätdienst (7:00–7:30, 15:00–16:30) mind. 2 Personen</span>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+<div style="padding:9px 20px;border-top:1px solid #eae7e7;display:flex;align-items:center;gap:10px;background:#f3f2f2">
+<span style="font-size:11px;color:#605d5d;flex:1 1 260px" aria-live="polite">Ausgewählt: <strong style="color:#201f1d">{{ selectionLabel }}</strong><br />Block ziehen verschiebt, Ränder ziehen ändert die Dauer · Tastatur: ←/→ verschieben, Alt+←/→ Beginn, Umschalt+←/→ Ende</span>
+<div style="display:flex;flex-wrap:wrap;gap:6px" role="group" aria-label="Block anpassen">
+<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ nudgeEarlier }}" disabled="{{ nudgeDisabled }}">◂ 15 Min früher</button>
+<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ nudgeLater }}" disabled="{{ nudgeDisabled }}">15 Min später ▸</button>
+<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ endShorter }}" disabled="{{ nudgeDisabled }}">Ende −15</button>
+<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ endLonger }}" disabled="{{ nudgeDisabled }}">Ende +15</button>
+</div>
+<button style="font:inherit;font-size:12px;background:transparent;border:none;color:#605d5d;cursor:pointer;text-decoration:underline" onClick="{{ clearSelection }}">Auswahl aufheben</button>
+</div>
+</sc-if>
+
+<div style="padding:9px 20px;border-top:1px solid #eae7e7;display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:#605d5d">
+<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;background:#f2e6cf;vertical-align:-1px;margin-right:5px"></i>Betreuung (zählt auf Schlüssel)</span>
+<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;vertical-align:-1px;margin-right:5px;background-color:#f8f4f4;background-image:radial-gradient(#c9a463 1.3px,transparent 1.6px);background-size:8px 8px"></i>Verfügungszeit</span>
+<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;vertical-align:-1px;margin-right:5px;background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 2px,transparent 2px 9px)"></i>Dienstbesprechung</span>
+<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;vertical-align:-1px;margin-right:5px;background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 1.5px,transparent 1.5px 9px),repeating-linear-gradient(-45deg,#d9bd85 0 1.5px,transparent 1.5px 9px)"></i>Anleitergespräch</span>
+<span><i style="display:inline-block;width:16px;height:11px;border:2px dotted #d7d3d3;vertical-align:-1px;margin-right:5px;background:#f8f4f4"></i>Pause (weder Arbeits- noch Betreuungszeit)</span>
+</div>
+
+<div style="border-top:1px solid #d7d3d3;padding:14px 20px">
+<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;margin:0 0 8px;font-weight:600">Regelprüfung · {{ day }}</h2>
+<sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px dotted #eae7e7">
+<span style="flex:none;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border:1px solid;height:17px;line-height:14px;color:{{ r.color }};border-color:{{ r.color }}">{{ r.tagLabel }}</span>
+<span style="font-size:12px">{{ r.title }}<em style="display:block;font-style:normal;color:#605d5d;font-size:11px;margin-top:2px">{{ r.desc }}</em></span>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ showPausenstaffel }}" hint-placeholder-val="{{ true }}">
+<div style="border-top:1px solid #d7d3d3;padding:14px 20px">
+<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;margin:0 0 8px;font-weight:600">Pausenstaffel · hinterlegte Regel</h2>
+<table style="border-collapse:collapse;font-size:11.5px;width:100%;max-width:520px">
+<thead><tr>
+<th style="border:1px solid #eae7e7;padding:5px 8px;text-align:left;background:#f3f2f2;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Arbeitszeit</th>
+<th style="border:1px solid #eae7e7;padding:5px 8px;text-align:left;background:#f3f2f2;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Volljährig · §4 ArbZG</th>
+<th style="border:1px solid #eae7e7;padding:5px 8px;text-align:left;background:#f3f2f2;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Unter 18 · §11 JArbSchG</th>
+</tr></thead>
+<tbody>
+<tr><td style="border:1px solid #eae7e7;padding:5px 8px">bis 4,5 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">keine</td><td style="border:1px solid #eae7e7;padding:5px 8px">keine</td></tr>
+<tr><td style="border:1px solid #eae7e7;padding:5px 8px">über 4,5 bis 6 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">keine</td><td style="border:1px solid #eae7e7;padding:5px 8px;color:#8a1f14;font-weight:600">30 min</td></tr>
+<tr><td style="border:1px solid #eae7e7;padding:5px 8px">über 6 bis 9 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">30 min</td><td style="border:1px solid #eae7e7;padding:5px 8px;color:#8a1f14;font-weight:600">60 min</td></tr>
+<tr><td style="border:1px solid #eae7e7;padding:5px 8px">über 9 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">45 min</td><td style="border:1px solid #eae7e7;padding:5px 8px;color:#8a1f14;font-weight:600">60 min</td></tr>
+</tbody>
+</table>
+<div style="font-size:11px;color:#605d5d;margin-top:8px"><strong>Zusätzlich, unabhängig von der Staffel:</strong> länger als sechs Stunden am Stück ohne Ruhepause ist unzulässig, unabhängig davon, wo die Pflichtpause im Tag liegt.</div>
+</div>
+</sc-if>
+
+<div style="border-top:1px solid #d7d3d3;padding:14px 20px">
+<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;margin:0 0 8px;font-weight:600">Wochenübersicht · {{ variantLabel }}</h2>
+<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:11px;width:100%;min-width:640px">
+<tr>
+<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Person</th>
+<sc-for list="{{ weekDayLabels }}" as="wd" hint-placeholder-count="5">
+<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">{{ wd }}</th>
+</sc-for>
+<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Ist</th>
+<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Soll</th>
+</tr>
+<sc-for list="{{ weekRows }}" as="wr" hint-placeholder-count="15">
+<tr>
+<td style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap"><strong>{{ wr.nm }}</strong></td>
+<sc-for list="{{ wr.cells }}" as="wc" hint-placeholder-count="5">
+<td style="{{ wc.style }}">{{ wc.label }}</td>
+</sc-for>
+<td style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;font-weight:600">{{ wr.ist }}</td>
+<td style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap">{{ wr.soll }}</td>
+</tr>
+</sc-for>
+</table></div>
+</div>
+
+<div style="padding:10px 20px;font-size:11px;color:#605d5d;border-top:1px dashed #d7d3d3">
+Fachkraft = Erzieherin oder höher; PiVA-Auszubildende zählen hier <strong>nicht</strong> als Fachkraft (offener Punkt, siehe Briefing 7). Leitung (Ulrike) ist Reserve und taucht im Rahmenplan nicht auf. Nora und Lena sind im Rahmenplan mit ihrem Normalzustand gezeigt — ihr aktueller Langzeitausfall bzw. Krankenstand gehört in die „konkrete Woche", nicht in den Rahmenplan. Blöcke sind auswählbar; in der Testfassung per Ziehen oder mit den 15-Minuten-Tasten verschiebbar — rechnet Abdeckung und Regelprüfung sofort neu.
+</div>
+</sc-if>
+
+<sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(32,31,29,.35);z-index:50" onClick="{{ closeProfile }}"></div>
+<div style="position:fixed;top:0;right:0;height:100%;width:400px;max-width:92vw;background:#f8f4f4;border-left:1px solid #d7d3d3;box-shadow:-8px 0 24px rgba(32,31,29,.18);z-index:51;overflow-y:auto;padding:18px 20px 40px;font:13px/1.5 'Lora',serif;color:#201f1d">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px">
+<h2 style="font:italic 600 20px/1.1 'Cormorant Garamond',serif;margin:0">{{ profile.nm }}</h2>
+<button style="font:inherit;font-size:12px;background:transparent;border:none;color:#605d5d;cursor:pointer" onClick="{{ closeProfile }}">Schließen ✕</button>
+</div>
+<div style="font-size:11px;color:#6b6767;margin-bottom:16px">Personalprofil · Einstellungen aus dem Briefing</div>
+
+<div style="margin-bottom:14px">
+<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+<input type="checkbox" checked="{{ profile.fk }}" onChange="{{ profile.onToggleFk }}" />
+Zählt als Fachkraft
+</label>
+</div>
+
+<div style="margin-bottom:14px">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-bottom:4px">Qualifikation</div>
+<input type="text" value="{{ profile.qual }}" onChange="{{ profile.onQual }}" style="width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid #d7d3d3;background:#fff" />
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:14px">
+<div style="flex:1">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-bottom:4px">Gruppe</div>
+<select value="{{ profile.grp }}" onChange="{{ profile.onGrp }}" style="width:100%;font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid #d7d3d3;background:#fff">
+<sc-for list="{{ groupOptions }}" as="go" hint-placeholder-count="3">
+<option value="{{ go }}">{{ go }}</option>
+</sc-for>
+</select>
+</div>
+<div style="width:110px">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-bottom:4px">Soll h/Wo</div>
+<input type="number" value="{{ profile.soll }}" onChange="{{ profile.onSoll }}" style="width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid #d7d3d3;background:#fff" />
+</div>
+</div>
+
+<div style="margin-bottom:16px">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-bottom:6px">Arbeitstage</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<sc-for list="{{ profile.dayChips }}" as="dc" hint-placeholder-count="5">
+<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer">
+<input type="checkbox" checked="{{ dc.checked }}" onChange="{{ dc.onToggle }}" />{{ dc.day }}
+</label>
+</sc-for>
+</div>
+</div>
+
+<div style="margin-bottom:6px;display:flex;align-items:baseline;justify-content:space-between">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767">Normalarbeitszeiten (Mo/Mi/Do/Fr)</div>
+<button onClick="{{ profile.onAddNorm }}" style="font:inherit;font-size:11px;background:transparent;border:none;color:#7d5411;cursor:pointer;text-decoration:underline">+ Block</button>
+</div>
+<div style="margin-bottom:16px">
+<sc-for list="{{ profile.normRows }}" as="nb" hint-placeholder-count="3">
+<div style="display:flex;gap:6px;align-items:center;padding:4px 0;flex-wrap:wrap">
+<input type="number" step="0.25" min="7" max="16.5" value="{{ nb.startVal }}" onChange="{{ nb.onStart }}" style="width:52px;font:inherit;font-size:11px;padding:3px 5px;border:1px solid #d7d3d3;background:#fff" />
+<span style="font-size:10px;color:#6b6767">–</span>
+<input type="number" step="0.25" min="7" max="16.5" value="{{ nb.endVal }}" onChange="{{ nb.onEnd }}" style="width:52px;font:inherit;font-size:11px;padding:3px 5px;border:1px solid #d7d3d3;background:#fff" />
+<span style="font-size:10px;color:#605d5d;min-width:70px">{{ nb.timeLabel }}</span>
+<select value="{{ nb.type }}" onChange="{{ nb.onType }}" style="font:inherit;font-size:11px;padding:3px 4px;border:1px solid #d7d3d3;background:#fff">
+<option value="betreuung">Betreuung</option>
+<option value="verfuegung">Verfügungszeit</option>
+<option value="pause">Pause</option>
+<option value="besprechung">Dienstbesprechung</option>
+<option value="anleitung">Anleitergespräch</option>
+</select>
+<select value="{{ nb.verb }}" onChange="{{ nb.onVerb }}" style="font:inherit;font-size:11px;padding:3px 4px;border:1px solid #d7d3d3;background:#fff">
+<option value="weich">weich</option>
+<option value="hart">hart</option>
+</select>
+<button onClick="{{ nb.onRemove }}" style="font:inherit;font-size:11px;background:transparent;border:none;color:#8a1f14;cursor:pointer">Entfernen</button>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-bottom:6px;display:flex;align-items:baseline;justify-content:space-between">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767">Dienstag (Sonderfall)</div>
+<sc-if value="{{ profile.hasTue }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ profile.onRemoveTue }}" style="font:inherit;font-size:11px;background:transparent;border:none;color:#8a1f14;cursor:pointer;text-decoration:underline">Sonderregel entfernen</button>
+</sc-if>
+<sc-if value="{{ profile.noTue }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ profile.onEnableTue }}" style="font:inherit;font-size:11px;background:transparent;border:none;color:#7d5411;cursor:pointer;text-decoration:underline">+ Sonderregel</button>
+</sc-if>
+</div>
+<sc-if value="{{ profile.hasTue }}" hint-placeholder-val="{{ false }}">
+<div style="margin-bottom:8px">
+<button onClick="{{ profile.onAddTue }}" style="font:inherit;font-size:11px;background:transparent;border:none;color:#7d5411;cursor:pointer;text-decoration:underline;margin-bottom:4px;display:block">+ Block</button>
+<sc-for list="{{ profile.tueRows }}" as="tb" hint-placeholder-count="3">
+<div style="display:flex;gap:6px;align-items:center;padding:4px 0;flex-wrap:wrap">
+<input type="number" step="0.25" min="7" max="16.5" value="{{ tb.startVal }}" onChange="{{ tb.onStart }}" style="width:52px;font:inherit;font-size:11px;padding:3px 5px;border:1px solid #d7d3d3;background:#fff" />
+<span style="font-size:10px;color:#6b6767">–</span>
+<input type="number" step="0.25" min="7" max="16.5" value="{{ tb.endVal }}" onChange="{{ tb.onEnd }}" style="width:52px;font:inherit;font-size:11px;padding:3px 5px;border:1px solid #d7d3d3;background:#fff" />
+<span style="font-size:10px;color:#605d5d;min-width:70px">{{ tb.timeLabel }}</span>
+<select value="{{ tb.type }}" onChange="{{ tb.onType }}" style="font:inherit;font-size:11px;padding:3px 4px;border:1px solid #d7d3d3;background:#fff">
+<option value="betreuung">Betreuung</option>
+<option value="verfuegung">Verfügungszeit</option>
+<option value="pause">Pause</option>
+<option value="besprechung">Dienstbesprechung</option>
+<option value="anleitung">Anleitergespräch</option>
+</select>
+<select value="{{ tb.verb }}" onChange="{{ tb.onVerb }}" style="font:inherit;font-size:11px;padding:3px 4px;border:1px solid #d7d3d3;background:#fff">
+<option value="weich">weich</option>
+<option value="hart">hart</option>
+</select>
+<button onClick="{{ tb.onRemove }}" style="font:inherit;font-size:11px;background:transparent;border:none;color:#8a1f14;cursor:pointer">Entfernen</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<div style="margin:16px 0;padding-top:14px;border-top:1px solid #eae7e7">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-bottom:6px">Praxisanleitung</div>
+<div style="font-size:11.5px;color:#605d5d;margin-bottom:4px">Wird angeleitet von</div>
+<select value="{{ profile.mentorOf }}" onChange="{{ profile.onMentor }}" style="width:100%;font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid #d7d3d3;background:#fff;margin-bottom:10px">
+<option value="">— niemand —</option>
+<sc-for list="{{ profile.mentorOptions }}" as="mo" hint-placeholder-count="4">
+<option value="{{ mo.id }}">{{ mo.nm }}</option>
+</sc-for>
+</select>
+<div style="font-size:11.5px;color:#605d5d">Ist Anleiter:in für: <strong style="color:#201f1d">{{ profile.leadsForLabel }}</strong></div>
+</div>
+
+<div style="margin-bottom:8px">
+<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-bottom:4px">Bemerkungen</div>
+<textarea rows="4" value="{{ profile.notiz }}" onChange="{{ profile.onNotiz }}" style="width:100%;box-sizing:border-box;font:inherit;font-size:12px;padding:8px;border:1px solid #d7d3d3;background:#fff;resize:vertical"></textarea>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:1400},&quot;showPausenstaffel&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Anzeige&quot;}}">
+const OPEN=7, CLOSE=16.5, SPAN=CLOSE-OPEN;
+const pct = h => ((h-OPEN)/SPAN)*100;
+const t = h => String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0');
+const min = h => Math.round(h*60);
+
+const PEOPLE=[
+ {id:'carla',nm:'Carla',qual:'Erzieherin',fk:true,soll:32,grp:'Frosch · 25 Kinder, 3–6 J.'},
+ {id:'tina',nm:'Tina',qual:'Sozialassistentin',fk:false,soll:30,grp:'Frosch · 25 Kinder, 3–6 J.'},
+ {id:'selin',nm:'Selin',qual:'Hilfskraft',fk:false,soll:25,grp:'Frosch · 25 Kinder, 3–6 J.'},
+ {id:'jonas',nm:'Jonas',qual:'PiVA, 2. Jahr',fk:false,soll:15,grp:'Frosch · 25 Kinder, 3–6 J.'},
+ {id:'heike',nm:'Heike',qual:'Erzieherin',fk:true,soll:34,grp:'Libellen · 23 Kinder, 2–6 J.'},
+ {id:'doris',nm:'Doris',qual:'Erzieherin',fk:true,soll:30,grp:'Libellen · 23 Kinder, 2–6 J.'},
+ {id:'frauke',nm:'Frauke',qual:'Erzieherin',fk:true,soll:30,grp:'Libellen · 23 Kinder, 2–6 J.'},
+ {id:'olga',nm:'Olga',qual:'Erzieherin',fk:true,soll:17,grp:'Libellen · 23 Kinder, 2–6 J.'},
+ {id:'waltraud',nm:'Waltraud',qual:'Erzieherin (Rentnerin)',fk:true,soll:6,grp:'Libellen · 23 Kinder, 2–6 J.'},
+ {id:'lena',nm:'Lena',qual:'Kinderpflegerin',fk:false,soll:39,grp:'Libellen · 23 Kinder, 2–6 J.'},
+ {id:'esther',nm:'Esther',qual:'Erzieherin · Anleitung Aylin',fk:true,soll:25,grp:'Flamingo · 14 Kinder, 1–3 J.'},
+ {id:'maren',nm:'Maren',qual:'Erzieherin',fk:true,soll:30,grp:'Flamingo · 14 Kinder, 1–3 J.'},
+ {id:'bettina',nm:'Bettina',qual:'Kinderpflegerin',fk:false,soll:18,grp:'Flamingo · 14 Kinder, 1–3 J.'},
+ {id:'aylin',nm:'Aylin',qual:'PiVA, letztes Jahr',fk:false,soll:15,grp:'Flamingo · 14 Kinder, 1–3 J.'},
+ {id:'nora',nm:'Nora',qual:'Erzieherin · stellv. Leitung',fk:true,soll:39,grp:'Flamingo · 14 Kinder, 1–3 J.'}
+];
+const GROUP_ORDER=['Frosch · 25 Kinder, 3–6 J.','Libellen · 23 Kinder, 2–6 J.','Flamingo · 14 Kinder, 1–3 J.'];
+const WORKDAYS={
+ carla:['Mo','Di','Mi','Do','Fr'],tina:['Mo','Di','Mi','Do','Fr'],selin:['Mo','Di','Mi','Do','Fr'],
+ jonas:['Mo','Di'],heike:['Mo','Di','Do','Fr'],doris:['Di','Mi','Do','Fr'],frauke:['Mo','Di','Mi','Do','Fr'],
+ olga:['Mo','Di','Mi'],waltraud:['Mi','Do'],lena:['Mo','Di','Mi','Do','Fr'],esther:['Mo','Di','Mi','Do','Fr'],
+ maren:['Mo','Di','Mi','Do','Fr'],bettina:['Di','Mi','Do'],aylin:['Mo','Di'],nora:['Mo','Di','Mi','Do','Fr']
+};
+const NORM={
+ carla:[[8,11.5,'betreuung'],[11.5,12,'pause'],[12,14.5,'betreuung']],
+ tina:[[7,10,'betreuung'],[10,10.5,'pause'],[10.5,13.5,'betreuung']],
+ selin:[[9,11.5,'betreuung'],[11.5,12,'pause'],[12,14,'betreuung']],
+ jonas:[[8,11.5,'betreuung'],[11.5,12,'pause'],[12,15.5,'betreuung']],
+ heike:[[7.5,12,'betreuung'],[12,12.5,'pause'],[12.5,16.5,'betreuung']],
+ doris:[[8,12,'betreuung'],[12,12.5,'pause'],[12.5,16,'betreuung']],
+ frauke:[[7,10,'betreuung'],[10,10.5,'pause'],[10.5,13,'betreuung']],
+ olga:[[8,11,'betreuung'],[11,11.5,'pause'],[11.5,14,'betreuung']],
+ waltraud:[[9,12,'betreuung']],
+ lena:[[7.5,12,'betreuung'],[12,12.5,'pause'],[12.5,15.75,'betreuung']],
+ esther:[[8,13,'betreuung']],
+ maren:[[8,11.5,'betreuung'],[11.5,12,'pause'],[12,14.5,'betreuung']],
+ bettina:[[9,12,'betreuung'],[12,12.5,'pause'],[12.5,15.5,'betreuung']],
+ aylin:[[8,11.5,'betreuung'],[11.5,12,'pause'],[12,15.5,'betreuung']],
+ nora:[[7.5,12,'betreuung'],[12,12.5,'pause'],[12.5,16,'betreuung']]
+};
+const TUE={
+ carla:[[8,9,'betreuung'],[9,11,'anleitung'],[11,11.5,'betreuung'],[11.5,12,'pause'],[12,14.5,'betreuung']],
+ jonas:[[8,9,'betreuung'],[9,11,'anleitung'],[11,13,'betreuung'],[13,13.5,'pause'],[13.5,15.75,'betreuung']],
+ esther:[[8,11,'betreuung'],[11,13,'anleitung']],
+ aylin:[[8,11,'betreuung'],[11,13,'anleitung'],[13,13.5,'pause'],[13.5,15.5,'betreuung']],
+ heike:[[7.5,12,'betreuung'],[12,12.5,'pause'],[12.5,14.25,'betreuung'],[14.25,15.75,'besprechung'],[15.75,16.5,'betreuung']],
+ doris:[[8,12,'betreuung'],[12,12.5,'pause'],[12.5,14.25,'betreuung'],[14.25,15.75,'besprechung'],[15.75,16,'betreuung']],
+ lena:[[7.5,12,'betreuung'],[12,12.5,'pause'],[12.5,14.25,'betreuung'],[14.25,15.75,'besprechung']],
+ bettina:[[9,12,'betreuung'],[12,12.5,'pause'],[12.5,14.25,'betreuung'],[14.25,15.5,'besprechung']],
+ nora:[[7.5,12,'betreuung'],[12,12.5,'pause'],[12.5,14.25,'betreuung'],[14.25,15.75,'besprechung'],[15.75,16,'betreuung']]
+};
+const FRAUKE_TUE_GELTEND=[[7.5,10.5,'betreuung'],[10.5,11,'pause'],[11,13.5,'betreuung']];
+const FRAUKE_TUE_TEST=[[7,10,'betreuung'],[10,10.5,'pause'],[10.5,13,'betreuung']];
+
+const TYPE_STYLE={
+ betreuung:'background:#f2e6cf;border:1px solid #b68235;color:#201f1d;font-weight:600;',
+ verfuegung:'background-color:#f8f4f4;background-image:radial-gradient(#c9a463 1.3px,transparent 1.6px);background-size:8px 8px;border:1px solid #b68235;color:#201f1d;font-weight:600;',
+ besprechung:'background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 2px,transparent 2px 9px);border:1px solid #b68235;color:#201f1d;font-weight:600;',
+ anleitung:'background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 1.5px,transparent 1.5px 9px),repeating-linear-gradient(-45deg,#d9bd85 0 1.5px,transparent 1.5px 9px);border:1px solid #b68235;color:#201f1d;font-weight:600;',
+ pause:'background:#f8f4f4;border:2px dotted #d7d3d3;color:#605d5d;'
+};
+const LBL={betreuung:'Betreuung',verfuegung:'Verfügungszeit',besprechung:'Dienstbesprechung',anleitung:'Anleitergespräch',pause:'Pause'};
+const NUDGEABLE={betreuung:1,verfuegung:1};
+const DAYS=['Mo','Di','Mi','Do','Fr'];
+const VERB_OVERRIDES={esther:{norm:['hart']}};
+const MENTOR_OF={aylin:'esther',jonas:'carla'};
+const TYPE_LABEL={betreuung:'Betreuung',verfuegung:'Verfügungszeit',pause:'Pause',besprechung:'Dienstbesprechung',anleitung:'Anleitergespräch'};
+
+class Component extends DCLogic {
+  state = { variant:'geltend', day:'Di', selected:null, testNudges:{}, dragging:null, view:'plan', profileOpen:null, profiles:{} };
+
+  defaultProfile(id){
+    const p=PEOPLE.find(pp=>pp.id===id);
+    const ov=VERB_OVERRIDES[id]||{};
+    const norm=(NORM[id]||[]).map((b,i)=>({start:b[0],end:b[1],type:b[2],verb:(ov.norm&&ov.norm[i])||'weich'}));
+    const tueSrc = id==='frauke' ? null : TUE[id];
+    const tue = tueSrc ? tueSrc.map((b,i)=>({start:b[0],end:b[1],type:b[2],verb:(ov.tue&&ov.tue[i])||'weich'})) : null;
+    return { qual:p.qual, fk:p.fk, grp:p.grp, soll:p.soll, workdays:[...WORKDAYS[id]], normBlocks:norm, tueBlocks:tue, mentorOf:MENTOR_OF[id]||'', notiz:'' };
+  }
+  getProfile(id){ return this.state.profiles[id] || this.defaultProfile(id); }
+  updateProfile(id, patch){
+    this.setState(s=>({profiles:{...s.profiles,[id]:{...this.getProfile(id),...patch}}}));
+  }
+  updateBlockField(id, which, idx, field, value){
+    const arr=[...this.getProfile(id)[which]];
+    arr[idx]={...arr[idx], [field]: (field==='start'||field==='end') ? parseFloat(value) : value};
+    this.updateProfile(id,{[which]:arr});
+  }
+  removeBlock(id, which, idx){
+    const arr=this.getProfile(id)[which].filter((_,i)=>i!==idx);
+    this.updateProfile(id,{[which]:arr});
+  }
+  addBlock(id, which){
+    const arr=[...(this.getProfile(id)[which]||[]), {start:8,end:9,type:'betreuung',verb:'weich'}];
+    this.updateProfile(id,{[which]:arr});
+  }
+  toggleWorkday(id, day){
+    const wd=this.getProfile(id).workdays;
+    const nw= wd.includes(day) ? wd.filter(d=>d!==day) : [...wd,day].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b));
+    this.updateProfile(id,{workdays:nw});
+  }
+  enableTueOverride(id){ this.updateProfile(id,{tueBlocks:[{start:8,end:12,type:'betreuung',verb:'weich'}]}); }
+  removeTueOverride(id){ this.updateProfile(id,{tueBlocks:null}); }
+  openProfile(id){ this.setState({profileOpen:id}); }
+  closeProfile(){ this.setState({profileOpen:null}); }
+
+  componentDidMount(){
+    this._onMove = (e)=>{
+      const d=this.state.dragging;
+      if(!d) return;
+      const dx=e.clientX-d.startX;
+      const dh=dx/d.rectWidth*SPAN;
+      let snapped=Math.round(dh/0.25)*0.25;
+      if(snapped===d.last) return;
+      d.last=snapped;
+      this.applyDelta(d.snap,snapped);
+    };
+    this._onUp = ()=>{ if(this.state.dragging) this.setState({dragging:null}); };
+    this._measure=()=>{ const el=document.querySelector('[data-timeline]'); const w=el?el.getBoundingClientRect().width:0; if(w&&Math.abs(w-(this.state.tlW||0))>1) this.setState({tlW:w}); };
+    this._ro=new ResizeObserver(this._measure); this._ro.observe(document.body); setTimeout(this._measure,50);
+    window.addEventListener('pointermove', this._onMove);
+    window.addEventListener('pointerup', this._onUp);
+  }
+  componentWillUnmount(){
+    if(this._ro) this._ro.disconnect();
+    window.removeEventListener('pointermove', this._onMove);
+    window.removeEventListener('pointerup', this._onUp);
+  }
+
+  baseBlocks(id, day, variant){
+    const prof=this.getProfile(id);
+    if(!prof.workdays.includes(day)) return [];
+    if(day==='Di'){
+      if(id==='frauke') return (variant==='test' ? FRAUKE_TUE_TEST : FRAUKE_TUE_GELTEND).map(b=>b.slice());
+      if(prof.tueBlocks) return prof.tueBlocks.map(b=>[b.start,b.end,b.type]);
+    }
+    return prof.normBlocks.map(b=>[b.start,b.end,b.type]);
+  }
+
+  blocksFor(id, day, variant){
+    const base=this.baseBlocks(id,day,variant);
+    if(variant!=='test') return base;
+    return base.map((b,idx)=>{
+      const key=id+'|'+day+'|'+idx;
+      const d=this.nudgeOf(key);
+      if(!d.s&&!d.e) return b;
+      const s=Math.max(OPEN,b[0]+d.s), e=Math.min(CLOSE,Math.max(s+0.25,b[1]+d.e));
+      return [s,e,b[2]];
+    });
+  }
+
+  select(id,day,idx,label){
+    this.setState({selected:{id,day,idx,label}});
+  }
+  clearSel(){ this.setState({selected:null}); }
+  nudge(delta,mode){
+    const sel=this.state.selected;
+    if(!sel||this.state.variant!=='test') return;
+    this.applyDelta(this.snapshot(sel.id,sel.day,sel.idx,mode||'move'),delta);
+  }
+  nudgeOf(key){ const v=this.state.testNudges[key]; return typeof v==='number'?{s:v,e:v}:(v||{s:0,e:0}); }
+  // Nachbarblöcke: bündig anliegende, verschiebbare Blöcke (inkl. Pause) wandern mit; alles andere begrenzt.
+  snapshot(id,day,idx,mode){
+    const bl=this.blocksFor(id,day,this.state.variant), me=bl[idx], M=0.25, k=i=>id+'|'+day+'|'+i;
+    let prev=null,next=null;
+    bl.forEach((b,i)=>{ if(i===idx) return;
+      if(b[1]<=me[0]+1e-9&&(!prev||b[1]>prev.b[1])) prev={i,b};
+      if(b[0]>=me[1]-1e-9&&(!next||b[0]<next.b[0])) next={i,b}; });
+    const adj=b=>NUDGEABLE[b[2]]||b[2]==='pause';
+    const lp=prev&&Math.abs(prev.b[1]-me[0])<1e-9&&adj(prev.b)?prev:null;
+    const ln=next&&Math.abs(next.b[0]-me[1])<1e-9&&adj(next.b)?next:null;
+    let lo=-Infinity,hi=Infinity;
+    if(mode==='l') hi=Math.min(hi,me[1]-M-me[0]);
+    if(mode==='r') lo=Math.max(lo,me[0]+M-me[1]);
+    if(mode!=='r'){ lo=Math.max(lo,OPEN-me[0]); if(lp) lo=Math.max(lo,lp.b[0]+M-me[0]); else if(prev) lo=Math.max(lo,prev.b[1]-me[0]); }
+    if(mode!=='l'){ hi=Math.min(hi,CLOSE-me[1]); if(ln) hi=Math.min(hi,ln.b[1]-M-me[1]); else if(next) hi=Math.min(hi,next.b[0]-me[1]); }
+    return {mode, key:k(idx), o:this.nudgeOf(k(idx)), lo, hi,
+      lp: (lp&&mode!=='r')?{key:k(lp.i),o:this.nudgeOf(k(lp.i))}:null,
+      ln: (ln&&mode!=='l')?{key:k(ln.i),o:this.nudgeOf(k(ln.i))}:null};
+  }
+  applyDelta(sn,delta){
+    const d=Math.max(sn.lo,Math.min(sn.hi,delta));
+    const ds=sn.mode!=='r'?d:0, de=sn.mode!=='l'?d:0;
+    const upd={[sn.key]:{s:sn.o.s+ds,e:sn.o.e+de}};
+    if(sn.lp) upd[sn.lp.key]={s:sn.lp.o.s,e:sn.lp.o.e+ds};
+    if(sn.ln) upd[sn.ln.key]={s:sn.ln.o.s+de,e:sn.ln.o.e};
+    this.setState(s=>({testNudges:{...s.testNudges,...upd}}));
+  }
+  startDrag(id,day,idx,e,mode){
+    e.stopPropagation(); e.preventDefault();
+    let el=e.currentTarget; if(mode!=='move') el=el.parentElement;
+    if(el.focus) el.focus({preventScroll:true});
+    const rect=el.parentElement.getBoundingClientRect();
+    this.setState({dragging:{key:id+'|'+day+'|'+idx, mode, startX:e.clientX, rectWidth:rect.width, last:0, snap:this.snapshot(id,day,idx,mode)}});
+  }
+
+  pflicht(az){ return az>9?0.75:(az>6?0.5:0); }
+
+  amStueck(blocks){
+    const bs=[...blocks].sort((a,b)=>a[0]-b[0]);
+    let max=0,st=null,prev=null;
+    bs.forEach(b=>{
+      if(b[2]==='pause'){ if(st!==null){max=Math.max(max,prev-st);st=null;} }
+      else { if(st===null) st=b[0]; prev=b[1]; }
+    });
+    if(st!==null) max=Math.max(max,prev-st);
+    return max;
+  }
+
+  slots(day,variant){
+    const out=[];
+    for(let h=OPEN; h<CLOSE; h+=0.25){
+      let tot=0,fk=0;
+      PEOPLE.forEach(p=>{
+        const bl=this.blocksFor(p.id,day,variant);
+        if(bl.some(b=>b[2]==='betreuung' && h>=b[0] && h<b[1])){ tot++; if(this.getProfile(p.id).fk) fk++; }
+      });
+      out.push({h,tot,fk});
+    }
+    return out;
+  }
+  spans(S,pred){
+    const out=[]; let st=null;
+    S.forEach(s=>{ if(pred(s)){ if(st===null) st=s.h; } else if(st!==null){ out.push([st,s.h]); st=null; } });
+    if(st!==null) out.push([st,CLOSE]);
+    return out;
+  }
+
+  computeRules(day,variant,S){
+    const L=[];
+    this.spans(S,s=>s.fk<1).forEach(x=>L.push(['v','Keine Fachkraft im Haus · '+t(x[0])+'–'+t(x[1]),
+      'Über die gesamte Öffnungszeit muss mindestens eine Fachkraft anwesend sein.']));
+    const isFruehSpaet=h=>(h>=7&&h<7.5)||(h>=15&&h<16.5);
+    this.spans(S,s=>isFruehSpaet(s.h)&&s.tot<2).forEach(x=>L.push(['v','Weniger als zwei Personen · '+t(x[0])+'–'+t(x[1]),
+      'Früh- und Spätdienst (zusammengelegte Gruppen) verlangen mindestens zwei Personen.']));
+    let teilnehmende=0, anwesend=0;
+    PEOPLE.forEach(p=>{
+      const bl=this.blocksFor(p.id,day,variant);
+      if(!bl.length) return;
+      anwesend++;
+      const az=bl.filter(b=>b[2]!=='pause').reduce((a,b)=>a+(b[1]-b[0]),0);
+      const pz=bl.filter(b=>b[2]==='pause').reduce((a,b)=>a+(b[1]-b[0]),0);
+      const soll_p=this.pflicht(az);
+      if(pz+1e-9<soll_p) L.push(['v',p.nm+': Pflichtpause fehlt · '+min(pz)+' statt '+min(soll_p)+' Minuten',
+        'Bei '+az.toFixed(2).replace('.',',')+' h Arbeitszeit sind '+min(soll_p)+' Minuten Pause vorgeschrieben.']);
+      const stueck=this.amStueck(bl);
+      if(stueck>6+1e-9) L.push(['v',p.nm+': '+stueck.toFixed(2).replace('.',',')+' h ohne Unterbrechung',
+        'Länger als sechs Stunden am Stück ist ohne Ruhepause unzulässig — unabhängig davon, ob die Pflichtpause an anderer Stelle liegt.']);
+      if(az>8+1e-9) L.push(['h',p.nm+': '+az.toFixed(2).replace('.',',')+' h Arbeitszeit',
+        'Über acht Stunden — nach §3 ArbZG nur mit Ausgleich innerhalb des Ausgleichszeitraums zulässig.']);
+      if(bl.some(b=>b[2]==='besprechung')){ teilnehmende++; }
+    });
+    if(day==='Di' && anwesend>0) L.push(['h','Dienstbesprechung: '+teilnehmende+' von '+anwesend+' anwesenden Personen nehmen teil',
+      'Nachmittags sind bereits viele Teilzeitkräfte gegangen. Dienstag trägt zusätzlich beide Anleitergespräche.']);
+    if(!L.length) L.push(['ok','Keine Verstöße','Alle hinterlegten Regeln sind für diesen Tag erfüllt.']);
+    return L;
+  }
+
+  weekTable(variant){
+    return PEOPLE.map(p=>{
+      let ist=0;
+      const cells=DAYS.map(d=>{
+        const bl=this.blocksFor(p.id,d,variant);
+        if(!bl.length) return {label:'—',style:'border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f6f4f0;color:#c2bcbc'};
+        const az=bl.filter(b=>b[2]!=='pause').reduce((a,b)=>a+(b[1]-b[0]),0);
+        ist+=az;
+        return {label:t(bl[0][0])+'–'+t(bl[bl.length-1][1]),style:'border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap'};
+      });
+      return {nm:p.nm, cells, ist:ist.toFixed(1).replace('.',','), soll:this.getProfile(p.id).soll};
+    });
+  }
+
+  renderVals(){
+    const {variant,day,selected,dragging}=this.state;
+    const S=this.slots(day,variant);
+    const mkSpans=(pred,label)=>this.spans(S,pred).map(x=>({left:pct(x[0]),width:((x[1]-x[0])/SPAN*100),title:label+' · '+t(x[0])+'–'+t(x[1])}));
+    const violationSpans=[
+      ...mkSpans(s=>s.fk<1,'Keine Fachkraft'),
+      ...mkSpans(s=>((s.h>=7&&s.h<7.5)||(s.h>=15&&s.h<16.5))&&s.tot<2,'Weniger als zwei Personen')
+    ];
+    const rules=this.computeRules(day,variant,S).map(([k,title,desc])=>({
+      tagLabel:k==='v'?'Verstoß':k==='h'?'Hinweis':'OK',
+      color:k==='v'?'#8a1f14':k==='h'?'#7d5411':'#2c6b2f', title, desc
+    }));
+
+    const groups=GROUP_ORDER.map(gname=>({
+      name:'Gruppe '+gname,
+      persons: PEOPLE.filter(p=>this.getProfile(p.id).grp===gname).map(p=>{
+        const prof=this.getProfile(p.id);
+        const bl=this.blocksFor(p.id,day,variant);
+        const az=bl.filter(b=>b[2]!=='pause').reduce((a,b)=>a+(b[1]-b[0]),0);
+        const on=bl.length>0;
+        const meta=prof.qual+(on?' · '+az.toFixed(2).replace('.',',')+' h · Soll '+prof.soll+' h/Wo':' · frei');
+        return {
+          nm:p.nm, meta, onOpenProfile:()=>this.openProfile(p.id),
+          blocks: bl.map((b,idx)=>{
+            const key=p.id+'|'+day+'|'+idx;
+            const isSel=selected&&selected.id===p.id&&selected.day===day&&selected.idx===idx;
+            const isDragging=dragging&&dragging.key===key;
+            const draggable=variant==='test'&&NUDGEABLE[b[2]];
+            const w=((b[1]-b[0])/SPAN*100);
+            const dur=b[1]-b[0];
+            const style='position:absolute;top:7px;height:24px;box-sizing:border-box;left:'+pct(b[0])+'%;width:'+w+'%;border-radius:2px;'+
+              'font-size:10.5px;line-height:22px;padding:0 '+(draggable?'10px':'5px')+';text-align:left;font-family:inherit;touch-action:none;user-select:none;'+
+              (isSel||isDragging?'z-index:3;':'')+
+              'cursor:'+(draggable?(isDragging?(dragging.mode==='move'?'grabbing':'ew-resize'):'grab'):'default')+';'+TYPE_STYLE[b[2]]+
+              (isSel?'outline:2px solid #201f1d;outline-offset:1px;':'')+
+              (isDragging?'box-shadow:0 3px 8px rgba(45,43,43,.28);z-index:2;':'');
+            return {
+              style, label:(()=>{
+                const px=dur/SPAN*(this.state.tlW||560)-(draggable?22:12);
+                const full=t(b[0])+'–'+t(b[1]);
+                const ts=h=>{ const m=Math.round((h%1)*60); return Math.floor(h)+(m?':'+String(m).padStart(2,'0'):''); };
+                const short=ts(b[0])+'–'+ts(b[1]);
+                if(px>=full.length*6) return full;
+                if(px>=short.length*6) return short;
+                return px>=ts(b[0]).length*6 ? ts(b[0]) : '';
+              })(),
+              showBadge: !!(isSel||isDragging),
+              badge: t(b[0])+'–'+t(b[1])+' · '+Math.floor(dur)+':'+String(Math.round((dur%1)*60)).padStart(2,'0')+' h',
+              tabIndex: draggable?0:-1, role: draggable?'button':'img',
+              aria: p.nm+', '+LBL[b[2]]+', '+t(b[0])+' bis '+t(b[1])+(draggable?'. Pfeiltasten verschieben, Alt plus Pfeil ändert Beginn, Umschalt plus Pfeil ändert Ende.':''),
+              onFocus: draggable ? (()=>{ if(!isSel) this.select(p.id,day,idx,''); }) : (()=>{}),
+              onKey: draggable ? ((e)=>{
+                if(e.key==='Escape'){ this.clearSel(); return; }
+                if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight') return;
+                e.preventDefault();
+                this.select(p.id,day,idx,'');
+                this.applyDelta(this.snapshot(p.id,day,idx,e.shiftKey?'r':(e.altKey?'l':'move')),e.key==='ArrowLeft'?-0.25:0.25);
+              }) : (()=>{}),
+              tooltip:p.nm+' · '+LBL[b[2]]+' · '+t(b[0])+'–'+t(b[1]),
+              resizable: !!draggable,
+              onDown: draggable ? ((e)=>{ this.select(p.id,day,idx,p.nm+' · '+LBL[b[2]]+' · '+t(b[0])+'–'+t(b[1])); this.startDrag(p.id,day,idx,e,'move'); }) : (()=>{}),
+              onDownL: (e)=>{ this.select(p.id,day,idx,p.nm+' · '+LBL[b[2]]+' · '+t(b[0])+'–'+t(b[1])); this.startDrag(p.id,day,idx,e,'l'); },
+              onDownR: (e)=>{ this.select(p.id,day,idx,p.nm+' · '+LBL[b[2]]+' · '+t(b[0])+'–'+t(b[1])); this.startDrag(p.id,day,idx,e,'r'); }
+            };
+          })
+        };
+      })
+    }));
+
+    const covTotal=S.map((s,i)=>{
+      const bad=((s.h>=7&&s.h<7.5)||(s.h>=15&&s.h<16.5))&&s.tot<2;
+      return {label:i%2===0?String(s.tot):'', title:t(s.h)+' · '+s.tot+' Personen',
+        style:'flex:1;border-right:1px solid #f8f4f4;font-size:10px;text-align:center;line-height:20px;'+
+          (bad?'background:#f3d9d6;color:#6b1710':'background:#eae7e7;color:#605d5d')};
+    });
+    const covFk=S.map((s,i)=>{
+      const bad=s.fk<1;
+      return {label:i%2===0?String(s.fk):'', title:t(s.h)+' · '+s.fk+' Fachkräfte',
+        style:'flex:1;border-right:1px solid #f8f4f4;font-size:10px;text-align:center;line-height:20px;'+
+          (bad?'background:#f3d9d6;color:#6b1710':'background:#eae7e7;color:#605d5d')};
+    });
+
+    const ticks=[];
+    for(let h=OPEN; h<=CLOSE; h++){ ticks.push({label:t(Math.min(h,CLOSE)), left:pct(Math.min(h,CLOSE))}); }
+
+    const weekRows=this.weekTable(variant);
+
+    const btnBase='font:inherit;font-size:12px;border:1px solid #d7d3d3;padding:5px 10px;cursor:pointer;';
+    const btnOn=btnBase+'background:#201f1d;color:#f8f4f4;border-color:#201f1d;';
+    const btnOff=btnBase+'background:#f8f4f4;color:#201f1d;';
+
+    const isPlanView = this.state.view==='plan';
+    const isPersonalView = this.state.view==='personal';
+    const personalGroups = GROUP_ORDER.map(gname=>({
+      name:'Gruppe '+gname,
+      people: PEOPLE.filter(p=>this.getProfile(p.id).grp===gname).map(p=>{
+        const prof=this.getProfile(p.id);
+        return { nm:p.nm, qual:prof.qual, soll:prof.soll,
+          fkLabel: prof.fk?'Fachkraft':'Nicht-Fachkraft', fkColor: prof.fk?'#2c6b2f':'#6b6767',
+          onOpen: ()=>this.openProfile(p.id) };
+      })
+    }));
+
+    const pid=this.state.profileOpen;
+    let profile=null;
+    if(pid){
+      const prof=this.getProfile(pid);
+      const person=PEOPLE.find(p=>p.id===pid);
+      const mkRows=(which)=>prof[which].map((b,idx)=>({
+        startVal:b.start, endVal:b.end, type:b.type, verb:b.verb,
+        timeLabel:t(b.start)+'–'+t(b.end),
+        onStart:(e)=>this.updateBlockField(pid,which,idx,'start',e.target.value),
+        onEnd:(e)=>this.updateBlockField(pid,which,idx,'end',e.target.value),
+        onType:(e)=>this.updateBlockField(pid,which,idx,'type',e.target.value),
+        onVerb:(e)=>this.updateBlockField(pid,which,idx,'verb',e.target.value),
+        onRemove:()=>this.removeBlock(pid,which,idx)
+      }));
+      const leadsFor=PEOPLE.filter(p=>this.getProfile(p.id).mentorOf===pid).map(p=>p.nm);
+      profile = {
+        nm:person.nm, fk:prof.fk, qual:prof.qual, grp:prof.grp, soll:prof.soll, notiz:prof.notiz, mentorOf:prof.mentorOf,
+        onToggleFk:()=>this.updateProfile(pid,{fk:!prof.fk}),
+        onQual:(e)=>this.updateProfile(pid,{qual:e.target.value}),
+        onGrp:(e)=>this.updateProfile(pid,{grp:e.target.value}),
+        onSoll:(e)=>this.updateProfile(pid,{soll:parseFloat(e.target.value)||0}),
+        onNotiz:(e)=>this.updateProfile(pid,{notiz:e.target.value}),
+        onMentor:(e)=>this.updateProfile(pid,{mentorOf:e.target.value}),
+        dayChips: DAYS.map(d=>({day:d, checked:prof.workdays.includes(d), onToggle:()=>this.toggleWorkday(pid,d)})),
+        normRows: mkRows('normBlocks'),
+        onAddNorm: ()=>this.addBlock(pid,'normBlocks'),
+        hasTue: !!prof.tueBlocks, noTue: !prof.tueBlocks,
+        tueRows: prof.tueBlocks ? mkRows('tueBlocks') : [],
+        onAddTue: ()=>this.addBlock(pid,'tueBlocks'),
+        onEnableTue: ()=>this.enableTueOverride(pid),
+        onRemoveTue: ()=>this.removeTueOverride(pid),
+        mentorOptions: PEOPLE.filter(p=>p.id!==pid).map(p=>({id:p.id,nm:p.nm})),
+        leadsForLabel: leadsFor.length ? leadsFor.join(', ') : '—'
+      };
+    }
+
+    return {
+      viewButtons:[
+        {label:'Rahmenplan', pressed:isPlanView, style:isPlanView?btnOn:btnOff, onClick:()=>this.setState({view:'plan'})},
+        {label:'Personal', pressed:isPersonalView, style:isPersonalView?btnOn:btnOff, onClick:()=>this.setState({view:'personal'})}
+      ],
+      isPlanView, isPersonalView, personalGroups,
+      profileOpen:pid, profile,
+      closeProfile:()=>this.closeProfile(),
+      groupOptions:GROUP_ORDER,
+      day, variantLabel: variant==='test'?'Testfassung 1':'Geltender Plan',
+      fassungButtons:[
+        {label:'Geltender Plan', pressed:variant==='geltend', style:variant==='geltend'?btnOn:btnOff, onClick:()=>this.setState({variant:'geltend',selected:null})},
+        {label:'Testfassung 1', pressed:variant==='test', style:variant==='test'?btnOn:btnOff, onClick:()=>this.setState({variant:'test'})}
+      ],
+      dayButtons:DAYS.map(d=>{
+        const rs=d===day?this.computeRules(d,variant,S):this.computeRules(d,variant,this.slots(d,variant));
+        const nv=rs.filter(r=>r[0]==='v').length, nh=rs.filter(r=>r[0]==='h').length;
+        const base='display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;line-height:1;';
+        const markStyle=base+(nv?'background:#8a1f14;color:#fff;':nh?'background:#f2e6cf;color:#7d5411;border:1px solid #b68235;':'background:#e3eee0;color:#2c6b2f;border:1px solid #9cc09a;');
+        const aria=d+': '+(nv?nv+(nv===1?' Verstoß':' Verstöße'):'keine Verstöße')+(nh?', '+nh+(nh===1?' Hinweis':' Hinweise'):'');
+        return {label:d, pressed:day===d, style:day===d?btnOn:btnOff, onClick:()=>this.setState({day:d,selected:null}),
+          mark: nv?String(nv):nh?'!':'✓', markStyle, aria};
+      }),
+      applyButtonStyle: btnBase+(variant==='test'?'background:#f8f4f4;color:#201f1d;':'background:#f3f2f2;color:#6b6767;border-color:#eae7e7;'),
+      applyDisabled: variant!=='test',
+      applyTestVersion: ()=>this.setState({variant:'geltend', testNudges:{}, selected:null}),
+      ticks, groups, covTotal, covFk, rules, violationSpans,
+      hasSelection: !!selected,
+      selectionLabel: (()=>{ if(!selected) return ''; const b=this.blocksFor(selected.id,selected.day,variant)[selected.idx]; const pp=PEOPLE.find(x=>x.id===selected.id); return b&&pp?pp.nm+' · '+LBL[b[2]]+' · '+t(b[0])+'–'+t(b[1]):''; })(),
+      nudgeEarlier: ()=>this.nudge(-0.25),
+      nudgeLater: ()=>this.nudge(0.25),
+      endShorter: ()=>this.nudge(-0.25,'r'),
+      endLonger: ()=>this.nudge(0.25,'r'),
+      nudgeDisabled: variant!=='test',
+      clearSelection: ()=>this.clearSel(),
+      showPausenstaffel: this.props.showPausenstaffel ?? true,
+      weekDayLabels:['Mo','Di','Mi','Do','Fr'],
+      weekRows
+    };
+  }
+}
+
+</script>
+</body>
+</html>

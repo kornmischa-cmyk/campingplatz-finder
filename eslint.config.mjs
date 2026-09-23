@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Eigenständiges Vite-Projekt mit eigenem Setup:
+    "rahmenplan-editor/**",
   ]),
 ]);
 
