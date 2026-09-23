@@ -3,7 +3,7 @@ import type { Day, Variant } from './domain/types';
 import { planToCsv } from './domain/csv';
 import { emptyData, seedData } from './domain/seed';
 import { parseBackup, toBackup } from './domain/storage';
-import { fmt } from './domain/time';
+import { fmtShort } from './domain/time';
 import { useStore } from './state/store';
 import { dateStamp, daysSince, downloadText, fmtDate } from './lib/download';
 import { PlanView } from './components/PlanView';
@@ -105,30 +105,38 @@ export function App() {
       <div className="app">
         <header className="head">
           <div>
-            <h1>Rahmenplan bearbeiten</h1>
+            <div className="kicker">{data.settings.kitaName}</div>
+            <h1>Rahmenplan</h1>
             <div className="sub">
-              {data.settings.kitaName} · Öffnung Mo–Fr {fmt(data.settings.open)}–{fmt(data.settings.close)} · {kinder} Kinder · {data.persons.length}{' '}
-              planbare Personen · {stunden.toLocaleString('de-DE')} Wochenstunden
+              Mo–Fr {fmtShort(data.settings.open)}–{fmtShort(data.settings.close)} · {kinder} Kinder · {data.persons.length} Personen ·{' '}
+              {stunden.toLocaleString('de-DE')} Wochenstunden
             </div>
           </div>
-          <div className="head-actions" role="group" aria-label="Geltenden Plan teilen und Daten sichern">
-            <span className="bar-label">Geltenden Plan teilen</span>
-            <button className="btn" onClick={print}>Drucken / PDF</button>
-            <button className="btn" onClick={exportCsv}>CSV (Excel)</button>
-            <button className="btn" onClick={backup}>Sicherung</button>
+          <div className="head-right">
+            <div className="tools" role="group" aria-label="Geltenden Plan teilen und Daten sichern">
+              <span className="tools-label">Geltenden Plan teilen:</span>
+              <button className="pill sm" onClick={print}>Drucken / PDF</button>
+              <button className="pill sm" onClick={exportCsv}>CSV (Excel)</button>
+              <button className="pill sm" onClick={backup}>Sicherung</button>
+            </div>
+            <nav className="seg" aria-label="Ansicht">
+              <button aria-pressed={view === 'plan'} onClick={() => setView('plan')}>Rahmenplan</button>
+              <button aria-pressed={view === 'personal'} onClick={() => setView('personal')}>Personal</button>
+              <button aria-pressed={view === 'settings'} onClick={() => setView('settings')}>Einstellungen</button>
+            </nav>
           </div>
         </header>
 
         {!saved && (
           <div className="banner bad" role="alert">
             Der Browser erlaubt kein Speichern. Änderungen gehen beim Schließen verloren.
-            <button className="btn" onClick={backup}>Jetzt Sicherung exportieren</button>
+            <button className="pill sm" onClick={backup}>Jetzt Sicherung exportieren</button>
           </div>
         )}
         {saved && backupDue && !data.meta.beispieldaten && (
           <div className="banner warn">
             Die Daten liegen nur in diesem Browser. Letzte Sicherung: {fmtDate(data.meta.lastBackup)}.
-            <button className="btn" onClick={backup}>Jetzt sichern</button>
+            <button className="pill sm" onClick={backup}>Jetzt sichern</button>
           </div>
         )}
         {data.meta.beispieldaten && (
@@ -137,13 +145,6 @@ export function App() {
             <button className="linkbtn" onClick={() => setView('settings')}>Unter „Einstellungen → Daten“ leer beginnen</button>
           </div>
         )}
-
-        <nav className="bar" aria-label="Ansicht">
-          <span className="bar-label">Ansicht</span>
-          <button className="btn" aria-pressed={view === 'plan'} onClick={() => setView('plan')}>Rahmenplan</button>
-          <button className="btn" aria-pressed={view === 'personal'} onClick={() => setView('personal')}>Personal</button>
-          <button className="btn" aria-pressed={view === 'settings'} onClick={() => setView('settings')}>Einstellungen</button>
-        </nav>
 
         <main>
           {view === 'plan' && (

@@ -18,6 +18,20 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Design-Update „Warm & freundlich“ (23.09.2026)
+
+Der Handoff wurde durch die finale visuelle Richtung ersetzt (`design-handoff/`). Logik und Interaktion sind unverändert,
+umgesetzt wurde die Präsentationsschicht: Bricolage Grotesque + Figtree (eingebettet), Tageskarten, Status-Banner,
+Gruppenfarben, Avatare, Säulendiagramm „Besetzung“, dunkle klebende Auswahlleiste, Befundkarten, aufklappbare
+Wochenübersicht und Pausenregeln. Beschriftungsregel jetzt ca. 7 px/Zeichen, Pausen ohne Kurzbeschriftung.
+
+Übertragen auf Dinge, die das Design nicht zeigt:
+- **Gruppenfarben**: Der Prototyp vergibt drei Farben fest nach Position. Da Gruppen konfigurierbar sind, rotieren sechs Farben
+  (die drei aus dem Design + drei ergänzte im selben Stil).
+- **Sprache**: Sichtbar „Probleme“/„Hinweise“ wie im Design; für Screenreader bleibt „Verstoß“/„Hinweis“ erhalten.
+- Einstellungen, Teilen/Sicherung, Testfassung anlegen/verwerfen, Entsperren und „Normalzeit übernehmen“ nutzen die Formensprache
+  des Designs (Segment-Schalter, Pills, Karten).
+
 ## Abweichungen vom Prototyp (bewusst)
 
 - Neben „Rahmenplan“ und „Personal“ gibt es die Ansicht **Einstellungen**, dort liegen Regeln, Gruppen und Daten.

@@ -2,7 +2,7 @@ import type { AppData } from '../domain/types';
 import { DAYS, TYPE_LABEL } from '../domain/types';
 import { blocksOf } from '../domain/plan';
 import { weekTable } from '../domain/rules';
-import { groupedPersons } from '../domain/groups';
+import { groupColor, groupedPersons } from '../domain/groups';
 import { fmt, fmtDecimal, fmtShort } from '../domain/time';
 import { fmtDate } from '../lib/download';
 
@@ -27,8 +27,8 @@ export function PrintView({ data }: { data: AppData }) {
       <div className="pr-legend">
         {(['betreuung', 'verfuegung', 'besprechung', 'anleitung', 'pause'] as const).map((t) => (
           <span key={t}>
-            <i className={`swatch t-${t}`} />
-            {TYPE_LABEL[t]}
+            <i className={`sw t-${t}`} style={t === 'betreuung' ? { background: '#e4efda', borderColor: '#4f8a3f' } : undefined} />
+            {t === 'betreuung' ? 'Betreuung (Gruppenfarbe)' : TYPE_LABEL[t]}
           </span>
         ))}
       </div>
@@ -53,7 +53,15 @@ export function PrintView({ data }: { data: AppData }) {
                   </div>
                   <div className="pr-lane">
                     {bl.map((b) => (
-                      <div key={b.id} className={`blk t-${b.type}`} style={{ left: `${pct(b.start)}%`, width: `${((b.end - b.start) / span) * 100}%` }}>
+                      <div
+                        key={b.id}
+                        className={`blk t-${b.type}`}
+                        style={{
+                          left: `${pct(b.start)}%`,
+                          width: `${((b.end - b.start) / span) * 100}%`,
+                          ...(b.type === 'betreuung' ? { background: groupColor(data.groups, group.id).s, borderColor: groupColor(data.groups, group.id).c } : {}),
+                        }}
+                      >
                         <span className="blk-label"><span>{b.end - b.start >= 1 ? `${fmtShort(b.start)}–${fmtShort(b.end)}` : ''}</span></span>
                       </div>
                     ))}
@@ -66,7 +74,7 @@ export function PrintView({ data }: { data: AppData }) {
       ))}
 
       <div className="pr-week">
-        <h2 style={{ font: "600 15px/1.1 'Cormorant Garamond', serif" }}>Wochenübersicht</h2>
+        <h2 style={{ font: '700 15px/1.1 var(--head)' }}>Wochenübersicht</h2>
         <table className="tbl compact">
           <thead>
             <tr>

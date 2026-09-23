@@ -8,7 +8,7 @@ import { workHours } from '../domain/rules';
 import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP } from '../domain/time';
 import type { Action } from '../state/store';
 import { LockIcon } from './Icons';
-import { groupedPersons, groupLabel } from '../domain/groups';
+import { groupColor, groupedPersons, initials } from '../domain/groups';
 
 export interface Selection {
   personId: string;
@@ -39,14 +39,16 @@ interface DragState {
   last: number;
 }
 
-/** Beschriftung abhängig von der verfügbaren Pixelbreite (ca. 6 px pro Zeichen) */
+const CH = 7; // ca. Pixel pro Zeichen bei 12px Schrift
+
+/** Beschriftung abhängig von der verfügbaren Pixelbreite; Pausen ohne Kurzbeschriftung */
 function blockLabel(b: Block, px: number): string {
   const full = `${fmt(b.start)}–${fmt(b.end)}`;
-  if (px >= full.length * 6) return full;
+  if (px >= full.length * CH) return full;
   const short = `${fmtShort(b.start)}–${fmtShort(b.end)}`;
-  if (px >= short.length * 6) return short;
+  if (px >= short.length * CH) return short;
   const s = fmtShort(b.start);
-  return px >= s.length * 6 ? s : '';
+  return b.type !== 'pause' && px >= s.length * CH ? s : '';
 }
 
 export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile }: Props) {
@@ -150,10 +152,15 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
 
       {groupedPersons(data).map(({ group: g, members }) => {
         if (!members.length) return null;
+        const gc = groupColor(data.groups, g.id);
         return (
           <section key={g.id} aria-label={`Gruppe ${g.name}`}>
-            <div className="row bordered">
-              <div className="group-name">Gruppe {groupLabel(g)}</div>
+            <div className="group-head">
+              <span className="group-dot" style={{ background: gc.c }} />
+              <h3>{g.name}</h3>
+              <span className="muted">
+                {[g.kinder ? `${g.kinder} Kinder` : '', g.alter].filter(Boolean).join(', ')}
+              </span>
             </div>
             <div className="row">
               <div />
@@ -168,14 +175,22 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
               const az = workHours(blocks);
               const meta = p.qual + (blocks.length ? ` · ${fmtDecimal(az)} h · Soll ${p.soll} h/Wo` : ' · frei');
               return (
-                <div className="row bordered" key={p.id}>
+                <div className="person-row" key={p.id}>
                   <div className="person-cell">
-                    <button className="person-name" onClick={(e) => onOpenProfile(p.id, e.currentTarget)}>
-                      {p.name}
-                    </button>
-                    <div className="person-meta">{meta}</div>
+                    <span className="avatar" aria-hidden="true" style={{ background: gc.s, color: gc.c }}>
+                      {initials(p.name)}
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="person-name-row">
+                        <button className="person-name" onClick={(e) => onOpenProfile(p.id, e.currentTarget)}>
+                          {p.name}
+                        </button>
+                        {p.fk && <span className="fk-pill" title="Fachkraft">FK</span>}
+                      </div>
+                      <div className="person-meta" title={meta}>{meta}</div>
+                    </div>
                   </div>
-                  <div className="lane">
+                  <div className="lane" style={{ background: `repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${100 / span}%)` }}>
                     {blocks.map((b, idx) => {
                       const draggable = canDrag(b, variant);
                       const locked = isLocked(b);
@@ -184,7 +199,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                       const isSel = selected?.personId === p.id && selected.day === day && selected.blockId === b.id;
                       const isDrag = drag?.personId === p.id && drag.blockId === b.id;
                       const dur = b.end - b.start;
-                      const px = (dur / span) * laneW - (draggable ? 22 : 12) - (b.verb === 'hart' ? 12 : 0);
+                      const px = (dur / span) * laneW - (draggable ? 24 : 14) - (b.verb === 'hart' ? 13 : 0);
                       const label = blockLabel(b, px);
                       const hartText = b.verb === 'hart' ? (b.unlocked ? ', harte Zeit, entsperrt' : ', harte Zeit, gesperrt') : '';
                       const aria =
@@ -199,6 +214,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           style={{
                             left: `${pct(b.start)}%`,
                             width: `${(dur / span) * 100}%`,
+                            ...(b.type === 'betreuung' ? { background: gc.s, borderColor: gc.c } : {}),
                             cursor: isDrag ? (drag!.mode === 'move' ? 'grabbing' : 'ew-resize') : undefined,
                           }}
                           tabIndex={focusable ? 0 : -1}

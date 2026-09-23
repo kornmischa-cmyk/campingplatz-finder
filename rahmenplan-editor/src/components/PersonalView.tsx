@@ -1,5 +1,5 @@
 import type { AppData, Person } from '../domain/types';
-import { groupedPersons, groupLabel } from '../domain/groups';
+import { groupColor, groupedPersons, initials } from '../domain/groups';
 import { uid } from '../domain/time';
 import type { Action } from '../state/store';
 
@@ -31,35 +31,43 @@ export function PersonalView({ data, dispatch, onOpenProfile }: Props) {
 
   return (
     <div className="personal">
-      <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>
+      <p className="hint" style={{ marginTop: 0 }}>
         Neue Personen erscheinen zunächst nicht im Plan. Sie tauchen in der Regelprüfung als Abweichung auf und lassen sich in der Testfassung mit
         „Normalzeit übernehmen“ einplanen.
       </p>
-      {groupedPersons(data).map(({ group, members }) => (
-        <div className="personal-group" key={group.id}>
-          <div className="personal-group-title">
-            <span>Gruppe {groupLabel(group)}</span>
-            {group.id !== '__ohne' && (
-              <button className="linkbtn" onClick={(e) => add(group.id, e.currentTarget)}>
-                + Person
+      {groupedPersons(data).map(({ group, members }) => {
+        const gc = groupColor(data.groups, group.id);
+        return (
+          <div className="personal-group" key={group.id}>
+            <div className="personal-group-title">
+              <span className="group-dot" style={{ background: gc.c }} />
+              <h3>{group.name}</h3>
+              <span className="muted">{[group.kinder ? `${group.kinder} Kinder` : '', group.alter].filter(Boolean).join(', ')}</span>
+              <span className="spacer" />
+              {group.id !== '__ohne' && (
+                <button className="pill sm" onClick={(e) => add(group.id, e.currentTarget)}>
+                  + Person
+                </button>
+              )}
+            </div>
+            {members.length === 0 && <div className="hint">Noch niemand in dieser Gruppe.</div>}
+            {members.map((p) => (
+              <button key={p.id} className="person-card" onClick={(e) => onOpenProfile(p.id, e.currentTarget)}>
+                <span className="left">
+                  <span className="avatar" aria-hidden="true" style={{ background: gc.s, color: gc.c }}>{initials(p.name)}</span>
+                  <span>
+                    <strong>{p.name}</strong>
+                    <small>
+                      {p.qual || 'ohne Qualifikationsangabe'} · Soll {p.soll} h/Wo · {p.workdays.join(', ') || 'keine Arbeitstage'}
+                    </small>
+                  </span>
+                </span>
+                <span className={`fk-badge ${p.fk ? 'yes' : 'no'}`}>{p.fk ? 'Fachkraft' : 'Nicht-Fachkraft'}</span>
               </button>
-            )}
+            ))}
           </div>
-          {members.length === 0 && <div className="hint">Noch niemand in dieser Gruppe.</div>}
-          {members.map((p) => (
-            <button key={p.id} className="person-card" onClick={(e) => onOpenProfile(p.id, e.currentTarget)}>
-              <span>
-                <strong>{p.name}</strong>
-                <br />
-                <small>
-                  {p.qual || 'ohne Qualifikationsangabe'} · Soll {p.soll} h/Wo · {p.workdays.join(', ') || 'keine Arbeitstage'}
-                </small>
-              </span>
-              <span className={`fk-badge ${p.fk ? 'yes' : 'no'}`}>{p.fk ? 'Fachkraft' : 'Nicht-Fachkraft'}</span>
-            </button>
-          ))}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

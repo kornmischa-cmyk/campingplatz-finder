@@ -24,11 +24,11 @@ export function ConfirmDialog({ req, onClose }: { req: ConfirmRequest | null; on
           <h2 id="confirm-title">{req.title}</h2>
           <div>{req.body}</div>
           <div className="dialog-actions">
-            <button className="btn" onClick={onClose} autoFocus>
+            <button className="pill" onClick={onClose} autoFocus>
               Abbrechen
             </button>
             <button
-              className={req.danger ? 'btn danger' : 'btn primary'}
+              className={req.danger ? 'cta danger' : 'cta'}
               onClick={() => {
                 req.onConfirm();
                 onClose();

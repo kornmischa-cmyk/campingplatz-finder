@@ -49,7 +49,7 @@ function BlockEditor({
           <select className="input sm" aria-label={`${label}, Block ${i + 1}, Ende`} value={b.end} onChange={(e) => set(i, { end: Number(e.target.value) })}>
             {optsFor(b.end).map((h) => <option key={h} value={h}>{fmt(h)}</option>)}
           </select>
-          <select className="input sm" aria-label={`${label}, Block ${i + 1}, Tätigkeit`} value={b.type} onChange={(e) => set(i, { type: e.target.value as Block['type'] })}>
+          <select className="input sm grow" aria-label={`${label}, Block ${i + 1}, Tätigkeit`} value={b.type} onChange={(e) => set(i, { type: e.target.value as Block['type'] })}>
             {BLOCK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
           </select>
           <select className="input sm" aria-label={`${label}, Block ${i + 1}, Verbindlichkeit`} value={b.verb} onChange={(e) => set(i, { verb: e.target.value as Block['verb'] })}>
@@ -175,7 +175,7 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
           </div>
         </fieldset>
 
-        <div className="hint" style={{ background: 'var(--surface)', padding: '6px 8px', marginBottom: 12 }}>
+        <div className="note">
           Normalarbeitszeiten sind die Vorlage für den Plan. Änderungen hier wirken nicht direkt auf den Plan, sondern erscheinen dort als Hinweis
           „weicht von der Normalarbeitszeit ab“.{' '}
           {hasTest ? (
@@ -212,7 +212,7 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
           </div>
         )}
 
-        <div style={{ margin: '16px 0', paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+        <div className="drawer-section">
           <div className="field-label">Praxisanleitung</div>
           <label className="hint" htmlFor={`${fid}-mentor`} style={{ display: 'block', marginBottom: 4 }}>Wird angeleitet von</label>
           <select id={`${fid}-mentor`} className="input" style={{ marginBottom: 10 }} value={person.mentorId} onChange={(e) => upd({ mentorId: e.target.value })}>
@@ -229,9 +229,9 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
           <textarea id={`${fid}-notiz`} className="input" rows={4} style={{ resize: 'vertical' }} value={person.notiz} onChange={(e) => upd({ notiz: e.target.value })} />
         </div>
 
-        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+        <div className="drawer-section">
           <button
-            className="btn danger"
+            className="pill danger"
             onClick={() =>
               confirm({
                 title: `${person.name || 'Person'} entfernen?`,

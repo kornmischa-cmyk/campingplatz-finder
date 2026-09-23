@@ -19,7 +19,7 @@ afterEach(() => {
 describe('App (Smoke)', () => {
   it('startet mit Beispieldaten in der Testfassung und speichert lokal', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Rahmenplan bearbeiten' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Rahmenplan', level: 1 })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Testfassung' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: /^Di: 3 Verstöße/ })).toBeTruthy();
     expect(localStorage.getItem(STORAGE_KEY)).toContain('"version":1');

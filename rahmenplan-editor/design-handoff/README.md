@@ -11,66 +11,93 @@ Die Dateien in diesem Paket sind **Design-Referenzen in HTML**. Es sind Prototyp
 `Rahmenplan-Editor.dc.html` lässt sich direkt im Browser öffnen (`support.js` muss daneben liegen). Die gesamte Logik steht im `<script data-dc-script>`-Block am Dateiende. Datenstrukturen, Regeln und Drag-Logik kann man dort 1:1 nachlesen.
 
 ## Fidelity
-**High-fidelity** bei Farben, Typografie, Blockmustern und Interaktionen. Abstände und Größen sind final genug, um sie zu übernehmen. Das Profil-Panel ist funktional vollständig, visuell aber weniger ausgearbeitet (mittlere Fidelity).
+**High-fidelity.** Farben, Typografie, Radien, Schatten, Blockmuster und Interaktionen sind final und sollen pixelgenau übernommen werden. Die visuelle Richtung ist **„Warm & freundlich“** (Variante A). Das Profil-Panel übernimmt Schriften und Farben dieser Richtung. Sein Formular-Layout ist funktional, visuell aber noch nicht voll ausgearbeitet (mittlere Fidelity).
 
 ---
 
 ## Ansichten
 
-### 1. Kopf + Ansichtsumschalter
-- H1 „Rahmenplan bearbeiten“: Cormorant Garamond italic 600, 21px
-- Untertitel: 11.5px, #605d5d (Kita, Öffnungszeit, Kinder, Personen, Wochenstunden)
-- Umschalter „Rahmenplan | Personal“: Toggle-Buttons mit `aria-pressed`
+Seitenhintergrund `#f7f1e8` (Creme). Inhalt zentriert, `max-width:1320px`, `padding:28px 28px 80px`. Grundschrift Figtree 14px/1.5, Tinte `#2a2622`.
 
-### 2. Rahmenplan (Hauptansicht)
-Leisten von oben nach unten, jeweils `padding:10px 20px`, getrennt durch `border-bottom:1px solid #eae7e7`:
+### 1. Kopf
+- Kicker „Kita Sonnenblume“: 13px/700, `#9a5a2c`
+- H1 „Rahmenplan“: Bricolage Grotesque 800, 36px/1.05, letter-spacing −.015em
+- Untertitel: 13.5px, `#5f564c`
+- Rechts ein Segment-Schalter „Rahmenplan | Personal“: Pill-Container `#efe4d4`, padding 4px, radius 999px. Aktiv: weiß, Schatten `0 1px 3px rgba(60,40,20,.18)`. Inaktiv: transparent, `#5f564c`. 13px/600, padding 8px 16px.
 
-**a) Fassung:** „Geltender Plan“, „Testfassung 1“, „+ Neue Testfassung“ (deaktiviert, Platzhalter), „Als geltend übernehmen“ (nur in der Testfassung aktiv).
+### 2. Rahmenplan
+**a) Fassung:** Segment-Schalter „Geltender Plan | Testfassung 1“ im gleichen Stil. Rechts der Hinweis „Verschieben geht nur in der Testfassung“ und der Primär-Button „Als geltend übernehmen“: Pill in `#c2552a`, weiß, 13px/700, padding 10px 18px, Schatten `0 4px 12px rgba(194,85,42,.3)`. Deaktiviert: `#efe6da` / `#7d7163`.
 
-**b) Tag:** Mo–Fr als Toggle-Buttons. **Jeder Tag hat ein Status-Badge** (18px hoch, Pill mit radius 9px, 10.5px/600):
-- rot `#8a1f14` auf weiß: Anzahl der Regelverstöße
-- „!“ `#f2e6cf`, Text `#7d5411`, Rand `#b68235`: nur Hinweise
-- „✓“ `#e3eee0`, Text `#2c6b2f`, Rand `#9cc09a`: alles in Ordnung
+**b) Tageskarten:** Grid mit 5 gleich breiten Spalten, gap 10px. Karte: radius 18px, padding 14px 16px.
+- Inaktiv: `#fffaf3`, Rand 2px `#efe4d4`
+- Aktiv: weiß, Rand 2px `#2a2622`, Schatten `0 8px 20px rgba(80,50,20,.12)`
 
-Daneben steht eine Legende für die drei Zustände. Der Button bekommt ein `aria-label` wie „Di: 5 Verstöße, 1 Hinweis“. Der Status wird für **jeden** Tag der aktiven Fassung live berechnet.
+Inhalt: Tagesname voll ausgeschrieben (Bricolage 700, clamp 14–19px) und darunter ein Status-Chip (Pill, 12.5px/600, Punkt 8px):
+- Verstoß: „5 Probleme“, bg `#fbe6df`, Text `#9c2f1c`, Punkt `#c8432b`
+- Hinweis: „1 Hinweis“, bg `#fbeed6`, Text `#7a520f`, Punkt `#d49a2a`
+- OK: „Alles gut“, bg `#e3f0df`, Text `#2d6536`, Punkt `#3f8f4c`
 
-**c) Zeitleiste** (Container `min-width:720px`, horizontal scrollbar):
-- Grid `160px | 1fr`. Links Name (als Button, öffnet das Profil) und Meta-Zeile (Qualifikation · Ist-h · Soll h/Wo), rechts die Timeline.
-- Achse 7:00–16:30 (OPEN=7, CLOSE=16.5), Stundenticks, vertikales Raster alle 10 %
-- Personen gruppiert nach Gruppe (Frosch, Libellen, Flamingo). Je Gruppe steht oben ein 7px hoher roter Streifen (`#8a1f14`) für Zeiträume mit Verstoß (keine Fachkraft, Früh-/Spätdienst unter 2 Personen).
-- Zeile 38px hoch, Block `top:7px; height:24px; box-sizing:border-box; radius 2px; 10.5px`
+`aria-label` z. B. „Di: 5 Verstöße, 1 Hinweis“.
 
-**d) Abdeckung:** zwei Zeilen, „Personen gesamt“ und „davon Fachkräfte“, je 20px hoch, eine Zelle pro 15 Minuten, Zahl alle 30 Minuten. Zellen grau `#eae7e7`, bei Unterschreitung `#f3d9d6` mit Text `#6b1710`. Darüber ein Erklärsatz, darunter eine Legende. Es zählen nur Blöcke vom Typ `betreuung`.
+**c) Status-Banner** (`aria-live="polite"`): radius 22px, padding 20px 24px, Hintergrund und Text in der Tonfarbe des Tages (siehe oben).
+- Links ein Kreis 64px in der Punktfarbe mit Zahl, „!“ oder „✓“ (Bricolage 800, 28px, weiß)
+- Rechts: Zeile „Dienstag · Testfassung 1“ (13px/700), Titel „5 Probleme“, „Keine Probleme“ oder „Alles gut besetzt“ (Bricolage 800, 28px) und ein Satz in Klartext (14px)
 
-**e) Auswahlleiste** (nur bei ausgewähltem Block, `aria-live="polite"`): Label, Bedienhinweis und die Buttons „◂ 15 Min früher“, „15 Min später ▸“, „Ende −15“, „Ende +15“, „Auswahl aufheben“.
+**d) Planungskarte:** weiß, radius 24px, padding 20px 22px 16px, Schatten `0 1px 2px rgba(80,50,20,.06), 0 12px 32px rgba(80,50,20,.07)`. Innen horizontal scrollbar (`min-width:780px`, `overflow-y:hidden`, 24px Luft oben für das Zeit-Badge).
+- Grid `220px | 1fr`. Stundenticks 12px/600, `#8a7e70`.
+- **Gruppenkopf:** Punkt 12px in Gruppenfarbe, Name (Bricolage 700, 18px), Zusatz „25 Kinder, 3–6 J.“ (13px, `#5f564c`). Darunter ein Problem-Streifen 6px, `#d9553b`, radius 3px.
+- **Personenzeile:** Trennlinie oben 1px `#f4ede3`.
+  - Avatar 36px rund mit Initialen (Bricolage 700, 13px) in Gruppen-Soft- und Gruppen-Farbe
+  - Name als Button (14.5px/700, Unterstreichung bei Hover), öffnet das Profil
+  - „FK“-Pill (10.5px/700, `#7a520f` auf `#fbeed6`) bei Fachkräften
+  - Meta-Zeile 12px, `#5f564c`
+- **Spur:** 52px hoch, Stundenlinien 1px `#f4ede3` alle 1/9.5 der Breite (10.5263 %).
+- **Block:** `top:9px; height:34px; radius:9px; font 12px; line-height 31px`. Betreuung in **Gruppenfarbe**: Soft-Fläche plus Rand 1.5px in Gruppenfarbe.
+- **Besetzung** (unter den Gruppen, Trennlinie 2px `#f4ede3`): Titel „Besetzung“ mit Erklärsatz, rechts ein Säulendiagramm mit 76px Höhe, einer Säule je 15 Minuten und gap 2px.
+  - Säulenhöhe = Personen / max. Säulenfläche `#ecdcc3`
+  - Unterer, dunkler Anteil = Fachkräfte, `#a8753d`
+  - Unterschreitung: Fläche `#f2b9aa`, Fachkraft-Anteil `#c8432b`
+  - Darunter zur halben Stunde „Personen / Fachkräfte“ (11px), dann eine Legende
+- **Legende der Blocktypen** am Kartenfuß (12px, `#5f564c`)
 
-**f) Legende der Blocktypen**, **g) Regelprüfung** des Tages als Liste mit Tag „Verstoß“, „Hinweis“ oder „OK“, **h) Pausenstaffel** (Info-Tabelle, per Prop `showPausenstaffel` ausblendbar), **i) Wochenübersicht** (Tabelle Person × Mo–Fr mit Zeitspanne, Ist-h, Soll-h), **j) Fußnote** mit fachlichen Annahmen.
+**e) Auswahlleiste:** `position:sticky; bottom:16px`, dunkel `#2a2622`, radius 20px, Schatten `0 12px 30px rgba(30,20,10,.28)`.
+- Inhalt: Label (fett), Bedienhinweis (12px, `#e3d9cc`)
+- Pill-Buttons `#4a4038`: „◂ 15 Min“, „15 Min ▸“, „Ende −15“, „Ende +15“
+- „Fertig“ (Link-Stil) hebt die Auswahl auf
+
+**f) „Was am Dienstag auffällt“:** H2 in Bricolage 700, 20px. Darunter ein Karten-Grid (`auto-fill, minmax(300px,1fr)`, gap 12px). Karte: radius 16px, padding 14px 16px, Hintergrund in Tonfarbe, Punkt 10px, Titel 600 in Tonfarbe, Beschreibung 13px `#4a433c`.
+
+**g) Aufklappbar (`<details>`):** „Wochenübersicht“ und „Pausenregeln“. Weiß, radius 18px, Tabellenlinien `#f1e8dc`, Kopf `#faf5ee`.
+
+**h) Fußnote:** 12.5px, max. 760px breit.
 
 ### 3. Personal
-Liste pro Gruppe: Karte je Person mit Name, Qualifikation, Soll-Stunden und dem Badge „Fachkraft“ oder „Nicht-Fachkraft“. Ein Klick öffnet das Profil.
+Liste pro Gruppe. Karten weiß, Rand `#efe4d4`, radius 14px, padding 12px 16px, mit Name, Qualifikation, Soll und Fachkraft-Badge. Ein Klick öffnet das Profil.
 
 ### 4. Profil-Panel (Drawer rechts)
-`position:fixed`, 400px breit (max. 92vw), Overlay `rgba(32,31,29,.35)`. Felder:
+`position:fixed`, 400px breit (max. 92vw), Hintergrund `#fffaf3`, Overlay `rgba(32,31,29,.35)`. Titel in Bricolage 800, 26px. Felder:
 - „Zählt als Fachkraft“ (Checkbox)
-- Qualifikation (Text), Gruppe (Select), Soll h/Wo (Zahl)
+- Qualifikation, Gruppe, Soll h/Wo
 - Arbeitstage (5 Checkboxen)
-- Normalarbeitszeiten: Liste von Blöcken, je Block Start/Ende (Schritt 0.25 h), Typ, **Verbindlichkeit hart/weich** und „Entfernen“; „+ Block“
-- Dienstag-Sonderfall: optional eigene Blockliste (+ Sonderregel / entfernen)
-- Praxisanleitung: „wird angeleitet von“ (Select) und „leitet an“ (abgeleitet, nur lesbar)
-- Bemerkungen (Textarea)
+- Normalarbeitszeiten: Blöcke mit Start/Ende (0.25er-Raster), Typ, **Verbindlichkeit hart/weich** und „Entfernen“; „+ Block“
+- Dienstag-Sonderfall (optional eigene Blockliste)
+- Praxisanleitung (angeleitet von / leitet an)
+- Bemerkungen
 
-Jede Änderung wirkt sofort auf Zeitleiste, Abdeckung, Regeln und Wochenübersicht.
+Änderungen wirken sofort überall.
 
 ---
 
 ## Blocktypen (visuell eindeutig, nicht nur über Farbe)
 | Typ | Darstellung |
 |---|---|
-| betreuung | Fläche `#f2e6cf`, Rand 1px `#b68235`, Text 600 |
-| verfuegung | Punktraster: `radial-gradient(#c9a463 1.3px, transparent 1.6px)` 8×8px auf `#f8f4f4` |
+| betreuung | Fläche in Gruppen-Soft-Farbe, Rand 1.5px Gruppenfarbe, Text 600 |
+| verfuegung | Punktraster: `radial-gradient(#c9a463 1.3px, transparent 1.6px)` 8×8px auf `#f8f4f4`, Rand `#b68235` |
 | besprechung | Diagonalstreifen 45°: `#d9bd85 0 2px, transparent 2px 9px` |
 | anleitung | Kreuzschraffur ±45°: `#d9bd85 0 1.5px, transparent 1.5px 9px` |
-| pause | `#f8f4f4`, Rand 2px dotted `#d7d3d3`, Text `#605d5d` |
+| pause | `#f8f4f4`, Rand 2px dotted `#d7d3d3`, Text `#605d5d`, keine Kurzbeschriftung |
+
+**Gruppenfarben:** Frosch `#4f8a3f` / soft `#e4efda` · Libellen `#2f78a3` / soft `#dcebf6` · Flamingo `#c2537a` / soft `#f9e2eb`
 
 ---
 
@@ -107,7 +134,7 @@ Die Breite der Timeline wird per ResizeObserver gemessen. Die verfügbare Pixelb
 3. nur Beginn „8“
 4. leer (die Zeit steht dann im Badge oder Tooltip)
 
-Faustregel: etwa 6px pro Zeichen.
+Faustregel: etwa 7px pro Zeichen bei 12px Schrift. Pausen erhalten keine Kurzbeschriftung.
 
 ### Fassungen
 - „Geltender Plan“ ist schreibgeschützt.
@@ -159,21 +186,24 @@ Empfehlung für Produktion: Blöcke mit stabiler ID statt Index. Fassungen als e
 
 ## Design-Tokens
 **Farben**
-- Tinte `#201f1d` · Sekundärtext `#605d5d` · Label/Tertiär `#6b6767` (AA auf Hintergrund)
-- Hintergrund `#f8f4f4` · Fläche hell `#f3f2f2` · Weiß `#fff`
-- Linien `#eae7e7` (fein), `#d7d3d3` (stark)
-- Akzent/Gold `#b68235` · Betreuung `#f2e6cf` · Muster `#c9a463`, `#d9bd85`
-- Link/Hinweis `#7d5411` · Verstoß `#8a1f14` · Verstoß hell `#f3d9d6`, Text dunkel `#6b1710`
-- OK `#2c6b2f` · OK hell `#e3eee0`, Rand `#9cc09a`
+- Seite `#f7f1e8` · Karte `#fff` · Karte warm `#fffaf3` · Segment-Track `#efe4d4` · Linien `#f4ede3` / `#efe4d4`
+- Tinte `#2a2622` · Sekundärtext `#5f564c` · Ticks `#8a7e70` · Kicker `#9a5a2c`
+- Primär (CTA) `#c2552a` · Auswahlleiste `#2a2622`, Buttons darin `#4a4038`
+- Status Verstoß: Text `#9c2f1c`, bg `#fbe6df`, Punkt `#c8432b`, Streifen `#d9553b`
+- Status Hinweis: Text `#7a520f`, bg `#fbeed6`, Punkt `#d49a2a`
+- Status OK: Text `#2d6536`, bg `#e3f0df`, Punkt `#3f8f4c`
+- Besetzung: Fläche `#ecdcc3`, Fachkräfte `#a8753d`, zu wenig `#f2b9aa` / `#c8432b`
+- Muster: Rand `#b68235`, `#c9a463`, `#d9bd85`
+- Gruppenfarben: siehe Blocktypen
 
 **Typografie**
-- Headlines: Cormorant Garamond (600, italic)
-- Text: Lora 400/500/600, Basis 13px/1.5
-- Größen: 21 (H1) · 19 (H2 Plan) · 13 · 12.5 · 12 · 11.5 · 11 · 10.5 · 10 (Minimum)
-- Section-Labels: 11px, uppercase, letter-spacing .05–.06em
+- Headlines: **Bricolage Grotesque** 700/800 (Google Fonts)
+- Text und UI: **Figtree** 400–700
+- Größen: 36 (H1) · 28 (Status-Titel) · 20 (H2) · 18–19 (Gruppe, Tag) · 14.5 · 14 · 13.5 · 13 · 12.5 · 12 · 11 (Minimum)
 
-**Radius** 2–3px (Pills 9px). **Schatten:** Drag `0 3px 8px rgba(45,43,43,.28)`, Drawer `-8px 0 24px rgba(32,31,29,.18)`.
-**Abstände:** Leisten `10px 20px`, Sektionen `14px 20px`, Gaps 6 / 10 / 14px.
+**Radien:** Seiten-Karte 24 · Status 22 · Tageskarte, Auswahlleiste 18–20 · Regelkarte 16 · Personenkarte 14 · Block 9 · Säulen 4 · Pills 999
+**Schatten:** Karte `0 1px 2px rgba(80,50,20,.06), 0 12px 32px rgba(80,50,20,.07)` · aktive Tageskarte `0 8px 20px rgba(80,50,20,.12)` · Drag `0 3px 8px rgba(45,43,43,.28)` · Auswahlleiste `0 12px 30px rgba(30,20,10,.28)`
+**Abstände:** Seite 28px · Karten-Padding 20–24px · Gaps 10 / 12 / 16 / 18px
 
 ## Barrierefreiheit (bereits berücksichtigt / noch offen)
 - ✅ Kontraste der Labels auf AA angehoben, Status nie nur über Farbe (Zahl, „!“ oder „✓“ plus Muster), Tastaturbedienung der Blöcke, `aria-pressed` bei Toggles, `aria-live` in der Auswahlleiste, Fokus-Outline
@@ -191,8 +221,8 @@ Empfehlung für Produktion: Blöcke mit stabiler ID statt Index. Fassungen als e
 6. Anbindung an die „konkrete Woche“ (Ausfälle, Vertretung)
 
 ## Dateien
-- `Rahmenplan-Editor.dc.html`: vollständiger Prototyp (Template + Logik in einer Datei)
+- `Rahmenplan-Editor.dc.html`: vollständiger Prototyp in der finalen Richtung „Warm & freundlich“ (Template + Logik in einer Datei). Die visuellen Anpassungen stehen gebündelt in der Methode `decorate()` am Ende der Logik.
 - `support.js`: Runtime, damit der Prototyp lokal im Browser läuft (nicht übernehmen)
 
 ## Assets
-Keine Bilder oder Icons. Fonts über Google Fonts (Cormorant Garamond, Lora). Alle Muster sind reine CSS-Gradients.
+Keine Bilder oder Icons. Fonts über Google Fonts (Bricolage Grotesque, Figtree). Alle Muster sind reine CSS-Gradients.

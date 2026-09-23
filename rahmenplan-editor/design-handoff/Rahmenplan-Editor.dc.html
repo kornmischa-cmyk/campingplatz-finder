@@ -8,34 +8,29 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:wght@400;500;600&display=swap" />
-<style>
-body{margin:0}
-a{color:#7d5411}
-a:hover{color:#8a1f14}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" />
+<style>body{margin:0;background:#f7f1e8}a{color:#b0532a}a:hover{color:#8a3d1c}</style>
 </helmet>
-<div style="background:#f8f4f4;border:1px solid #d7d3d3;margin:10px;color:#201f1d;font:13px/1.5 'Lora',serif" data-screen-label="Rahmenplan-Editor">
-
-<div style="padding:14px 20px;border-bottom:1px solid #eae7e7">
-<h1 style="font:italic 600 21px/1.1 'Cormorant Garamond',serif;margin:0 0 3px">Rahmenplan bearbeiten</h1>
-<div style="font-size:11.5px;color:#605d5d">Kita Sonnenblume (fiktiv) · Öffnung Mo–Fr 7:00–16:30 · 62 Kinder · 15 planbare Personen · 307 Wochenstunden</div>
+<div data-screen-label="Rahmenplan · Variante A" style="min-height:100vh;background:#f7f1e8;color:#2a2622;font:14px/1.5 'Figtree',sans-serif">
+<div style="max-width:1320px;margin:0 auto;padding:28px 28px 80px">
+<header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:24px">
+<div>
+<div style="font-size:13px;font-weight:700;color:#9a5a2c">Kita Sonnenblume</div>
+<h1 style="font:800 36px/1.05 'Bricolage Grotesque',sans-serif;margin:2px 0 6px;letter-spacing:-.015em">Rahmenplan</h1>
+<div style="font-size:13.5px;color:#5f564c">Mo–Fr 7:00–16:30 · 62 Kinder · 15 Personen · 307 Wochenstunden</div>
 </div>
-
-<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid #eae7e7">
-<span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-right:2px">Ansicht</span>
-<sc-for list="{{ viewButtons }}" as="vb" hint-placeholder-count="2">
-<button style="{{ vb.style }}" onClick="{{ vb.onClick }}" aria-pressed="{{ vb.pressed }}">{{ vb.label }}</button>
-</sc-for>
+<div role="group" aria-label="Ansicht" style="display:flex;gap:4px;padding:4px;background:#efe4d4;border-radius:999px">
+<sc-for list="{{ viewButtons }}" as="vb" hint-placeholder-count="2"><button style="{{ vb.style }}" onClick="{{ vb.onClick }}" aria-pressed="{{ vb.pressed }}">{{ vb.label }}</button></sc-for>
 </div>
-
+</header>
 <sc-if value="{{ isPersonalView }}" hint-placeholder-val="{{ false }}">
-<div style="padding:16px 20px">
+<div style="max-width:760px">
 <sc-for list="{{ personalGroups }}" as="pg" hint-placeholder-count="3">
 <div style="margin-bottom:18px">
 <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;border-bottom:1px solid #d7d3d3;padding-bottom:4px;margin-bottom:8px">{{ pg.name }}</div>
 <sc-for list="{{ pg.people }}" as="pp" hint-placeholder-count="4">
-<button onClick="{{ pp.onOpen }}" style="display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:#fff;border:1px solid #eae7e7;border-radius:3px;padding:9px 12px;margin-bottom:6px;cursor:pointer;font:inherit">
+<button onClick="{{ pp.onOpen }}" style="display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:#fff;border:1px solid #efe4d4;border-radius:14px;padding:12px 16px;margin-bottom:6px;cursor:pointer;font:inherit">
 <span><strong style="font-size:12.5px;color:#201f1d">{{ pp.nm }}</strong><br /><span style="font-size:10.5px;color:#605d5d">{{ pp.qual }} · Soll {{ pp.soll }} h/Wo</span></span>
 <span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:{{ pp.fkColor }};border:1px solid {{ pp.fkColor }};padding:2px 6px;border-radius:2px">{{ pp.fkLabel }}</span>
 </button>
@@ -45,64 +40,54 @@ a:hover{color:#8a1f14}
 </div>
 </sc-if>
 
+
 <sc-if value="{{ isPlanView }}" hint-placeholder-val="{{ true }}">
-<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid #eae7e7">
-<span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-right:2px">Fassung</span>
-<sc-for list="{{ fassungButtons }}" as="fb" hint-placeholder-count="2">
-<button style="{{ fb.style }}" onClick="{{ fb.onClick }}" aria-pressed="{{ fb.pressed }}">{{ fb.label }}</button>
-</sc-for>
-<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px dashed #d7d3d3;padding:5px 10px;cursor:pointer;color:#6b6767" disabled="{{ true }}">+ Neue Testfassung</button>
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
+<div role="group" aria-label="Fassung" style="display:flex;gap:4px;padding:4px;background:#efe4d4;border-radius:999px">
+<sc-for list="{{ fassungButtons }}" as="fb" hint-placeholder-count="2"><button style="{{ fb.style }}" onClick="{{ fb.onClick }}" aria-pressed="{{ fb.pressed }}">{{ fb.label }}</button></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+<span style="font-size:13px;color:#5f564c">Verschieben geht nur in der Testfassung</span>
 <button style="{{ applyButtonStyle }}" onClick="{{ applyTestVersion }}" disabled="{{ applyDisabled }}">Als geltend übernehmen</button>
 </div>
-
-<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 20px;border-bottom:1px solid #eae7e7" role="group" aria-label="Wochentag">
-<span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b6767;margin-right:2px">Tag</span>
+</div>
+<div role="group" aria-label="Wochentag" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:18px">
 <sc-for list="{{ dayButtons }}" as="db" hint-placeholder-count="5">
-<button style="{{ db.style }}" onClick="{{ db.onClick }}" aria-pressed="{{ db.pressed }}" aria-label="{{ db.aria }}" title="{{ db.aria }}"><span style="display:inline-flex;align-items:center;gap:7px">{{ db.label }}<span aria-hidden="true" style="{{ db.markStyle }}">{{ db.mark }}</span></span></button>
-</sc-for>
-<span aria-hidden="true" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-left:10px;font-size:10.5px;color:#605d5d">
-<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;background:#8a1f14;color:#fff">3</span>Anzahl Regelverstöße</span>
-<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;background:#f2e6cf;color:#7d5411;border:1px solid #b68235">!</span>nur Hinweise</span>
-<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;font-size:10.5px;font-weight:600;background:#e3eee0;color:#2c6b2f;border:1px solid #9cc09a">✓</span>alles in Ordnung</span>
-</span>
-</div>
-
-<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-<div style="min-width:720px;padding:14px 20px 10px">
-
-<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
-<h2 style="font:600 19px/1.1 'Cormorant Garamond',serif;margin:0">Rahmenplan · {{ day }}</h2>
-<span style="font:italic 400 12px/1 'Cormorant Garamond',serif;color:#7d5411">{{ variantLabel }}</span>
-</div>
-
-<div style="display:grid;grid-template-columns:160px 1fr">
-<div></div>
-<div style="position:relative;height:18px">
-<sc-for list="{{ ticks }}" as="tk" hint-placeholder-count="10">
-<span style="position:absolute;font-size:10.5px;color:#6b6767;transform:translateX(-50%);left:{{ tk.left }}%">{{ tk.label }}</span>
+<button style="{{ db.style }}" onClick="{{ db.onClick }}" aria-pressed="{{ db.pressed }}" aria-label="{{ db.aria }}">
+<span style="font:700 clamp(14px,1.5vw,19px)/1.1 'Bricolage Grotesque',sans-serif;color:#2a2622;max-width:100%;overflow:hidden;text-overflow:ellipsis">{{ db.dayFull }}</span>
+<span style="{{ db.chipStyle }}"><span style="{{ db.dotStyle }}"></span>{{ db.statusShort }}</span>
+</button>
 </sc-for>
 </div>
+<div style="{{ statusBoxStyle }}" aria-live="polite">
+<span style="{{ statusNumStyle }}" aria-hidden="true">{{ statusMark }}</span>
+<div style="flex:1 1 280px">
+<div style="font-size:13px;font-weight:700">{{ dayFull }} · {{ variantLabel }}</div>
+<div style="font:800 28px/1.15 'Bricolage Grotesque',sans-serif;margin:2px 0 4px">{{ statusTitle }}</div>
+<div style="font-size:14px">{{ statusSub }}</div>
 </div>
-
+</div>
+<div style="background:#fff;border-radius:24px;box-shadow:0 1px 2px rgba(80,50,20,.06),0 12px 32px rgba(80,50,20,.07);padding:20px 22px 16px;margin-bottom:18px">
+<div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-top:24px;margin-top:-24px"><div style="min-width:780px">
+<div style="display:grid;grid-template-columns:220px 1fr"><div></div><div style="position:relative;height:20px"><sc-for list="{{ ticks }}" as="tk" hint-placeholder-count="10"><span style="position:absolute;font-size:12px;font-weight:600;color:#8a7e70;transform:translateX(-50%);left:{{ tk.left }}%">{{ tk.label }}</span></sc-for></div></div>
 <sc-for list="{{ groups }}" as="grp" hint-placeholder-count="3">
-<div style="display:grid;grid-template-columns:160px 1fr;border-bottom:1px solid #eae7e7">
-<div style="grid-column:1/-1;padding:9px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;border-bottom:1px solid #d7d3d3">{{ grp.name }}</div>
-</div>
-<div style="display:grid;grid-template-columns:160px 1fr">
-<div></div>
-<div style="position:relative;height:7px;margin:3px 0">
-<sc-for list="{{ violationSpans }}" as="vs" hint-placeholder-count="2">
-<div style="position:absolute;top:0;height:7px;left:{{ vs.left }}%;width:{{ vs.width }}%;background:#8a1f14;border-radius:1px" title="{{ vs.title }}"></div>
-</sc-for>
-</div>
-</div>
+<div style="display:flex;align-items:center;gap:10px;margin:18px 0 6px"><span style="{{ grp.dotStyle }}"></span><h3 style="margin:0;font:700 18px/1.2 'Bricolage Grotesque',sans-serif">{{ grp.short }}</h3><span style="font-size:13px;color:#5f564c">{{ grp.sub }}</span></div>
+<div style="display:grid;grid-template-columns:220px 1fr"><div></div><div style="position:relative;height:6px;margin:0 0 4px">
+<sc-for list="{{ violationSpans }}" as="vs" hint-placeholder-count="2"><div style="position:absolute;top:0;height:6px;left:{{ vs.left }}%;width:{{ vs.width }}%;background:#d9553b;border-radius:3px" title="{{ vs.title }}"></div></sc-for>
+</div></div>
 <sc-for list="{{ grp.persons }}" as="p" hint-placeholder-count="4">
-<div style="display:grid;grid-template-columns:160px 1fr;border-bottom:1px solid #eae7e7">
-<div style="padding:7px 8px 7px 0;border-right:1px solid #eae7e7">
-<button onClick="{{ p.onOpenProfile }}" style="font-weight:600;font-size:12.5px;background:transparent;border:none;padding:0;cursor:pointer;color:#201f1d;text-align:left;text-decoration:underline;text-decoration-color:#d7d3d3;font-family:inherit">{{ p.nm }}</button>
-<div style="font-size:10.5px;color:#605d5d">{{ p.meta }}</div>
+<div style="display:grid;grid-template-columns:220px 1fr;align-items:center;border-top:1px solid #f4ede3">
+<div style="display:flex;align-items:center;gap:10px;padding:6px 12px 6px 0;min-width:0">
+<span style="{{ p.avatarStyle }}" aria-hidden="true">{{ p.initials }}</span>
+<div style="min-width:0">
+<div style="display:flex;align-items:center;gap:6px">
+<button onClick="{{ p.onOpenProfile }}" style="font:inherit;font-weight:700;font-size:14.5px;background:transparent;border:none;padding:0;cursor:pointer;color:#2a2622;text-align:left" style-hover="text-decoration:underline">{{ p.nm }}</button>
+<sc-if value="{{ p.isFk }}" hint-placeholder-val="{{ false }}"><span title="Fachkraft" style="font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#7a520f;background:#fbeed6;border-radius:999px;padding:1px 7px">FK</span></sc-if>
 </div>
-<div data-timeline="1" style="position:relative;height:38px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),#eae7e7 calc(10% - 1px),#eae7e7 10%)">
+<div style="font-size:12px;color:#5f564c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.meta }}</div>
+</div>
+</div>
+<div data-timeline="1" style="position:relative;height:52px;background:repeating-linear-gradient(90deg,#f4ede3 0,#f4ede3 1px,transparent 1px,transparent 10.5263%)">
 <sc-for list="{{ p.blocks }}" as="b" hint-placeholder-count="3">
 <div style="{{ b.style }}" onPointerDown="{{ b.onDown }}" onKeyDown="{{ b.onKey }}" onFocus="{{ b.onFocus }}" tabIndex="{{ b.tabIndex }}" role="{{ b.role }}" aria-label="{{ b.aria }}" title="{{ b.tooltip }}" style-focus="outline:2px solid #201f1d;outline-offset:1px">
 <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none">{{ b.label }}</span>
@@ -114,125 +99,100 @@ a:hover{color:#8a1f14}
 </div>
 </sc-for>
 </sc-for>
-
-<div style="border-top:1px solid #d7d3d3;padding-top:8px;margin-top:2px">
-<div style="display:grid;grid-template-columns:160px 1fr;margin-bottom:6px">
-<h3 style="margin:0;font-size:11.5px;font-weight:600">Abdeckung</h3>
-<div style="font-size:10.5px;color:#605d5d;text-wrap:pretty">Wie viele Personen in der Betreuung eingeplant sind, je Viertelstunde (Zahl alle 30 Min.). Pausen, Besprechungen und Verfügungszeit zählen nicht mit.</div>
+<div style="display:grid;grid-template-columns:220px 1fr;margin-top:18px;padding-top:16px;border-top:2px solid #f4ede3">
+<div style="padding-right:14px">
+<h3 style="margin:0 0 4px;font:700 17px/1.2 'Bricolage Grotesque',sans-serif">Besetzung</h3>
+<div style="font-size:12.5px;color:#5f564c;text-wrap:pretty">Wie viele Personen gerade betreuen. Der dunkle Teil sind Fachkräfte.</div>
 </div>
-<div style="display:grid;grid-template-columns:160px 1fr;align-items:center">
-<div style="font-size:11px;padding-right:8px">Personen gesamt</div>
-<div style="position:relative;height:20px;display:flex" aria-label="Betreuende Personen je Zeitabschnitt">
-<sc-for list="{{ covTotal }}" as="c" hint-placeholder-count="20">
-<div style="{{ c.style }}" title="{{ c.title }}">{{ c.label }}</div>
-</sc-for>
+<div>
+<div style="display:flex;align-items:flex-end;gap:2px;height:76px" aria-label="Besetzung je Viertelstunde">
+<sc-for list="{{ covBars }}" as="c" hint-placeholder-count="38"><div title="{{ c.title }}" style="flex:1;height:100%;display:flex;align-items:flex-end"><div style="{{ c.outer }}"><div style="{{ c.inner }}"></div></div></div></sc-for>
 </div>
-</div>
-<div style="display:grid;grid-template-columns:160px 1fr;align-items:center;margin-top:2px">
-<div style="font-size:11px;padding-right:8px">davon Fachkräfte</div>
-<div style="position:relative;height:20px;display:flex" aria-label="Davon Fachkräfte je Zeitabschnitt">
-<sc-for list="{{ covFk }}" as="c" hint-placeholder-count="20">
-<div style="{{ c.style }}" title="{{ c.title }}">{{ c.label }}</div>
-</sc-for>
-</div>
-</div>
-<div style="display:grid;grid-template-columns:160px 1fr;margin-top:6px">
-<div></div>
-<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:#605d5d">
-<span style="display:inline-flex;align-items:center;gap:5px"><i style="display:inline-block;width:16px;height:11px;background:#eae7e7"></i>Mindestbesetzung erfüllt</span>
-<span style="display:inline-flex;align-items:center;gap:5px"><i style="display:inline-block;width:16px;height:11px;background:#f3d9d6;border:1px solid #8a1f14;box-sizing:border-box"></i>unterschritten: mind. 1 Fachkraft durchgehend · Früh-/Spätdienst (7:00–7:30, 15:00–16:30) mind. 2 Personen</span>
+<div style="position:relative;height:18px;margin-top:4px"><sc-for list="{{ covHours }}" as="ch" hint-placeholder-count="9"><span style="{{ ch.style }}">{{ ch.label }}</span></sc-for></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:6px;font-size:12px;color:#5f564c">
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;background:#ecdcc3"></i>Personen</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;background:#a8753d"></i>davon Fachkräfte</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;background:#c8432b"></i>zu wenig – mind. 1 Fachkraft, Früh-/Spätdienst mind. 2 Personen</span>
+<span>Zahlen: Personen / Fachkräfte zur halben Stunde</span>
 </div>
 </div>
 </div>
-
+</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;padding-top:12px;border-top:1px solid #f4ede3;font-size:12px;color:#5f564c">
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-flex;gap:2px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;background:#e4efda;border:1.5px solid #4f8a3f"></i><i style="display:inline-block;width:18px;height:12px;border-radius:3px;background:#dcebf6;border:1.5px solid #2f78a3"></i><i style="display:inline-block;width:18px;height:12px;border-radius:3px;background:#f9e2eb;border:1.5px solid #c2537a"></i></span>Betreuung (in Gruppenfarbe)</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;border:1px solid #b68235;background-color:#f8f4f4;background-image:radial-gradient(#c9a463 1.3px,transparent 1.6px);background-size:8px 8px"></i>Verfügungszeit</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;border:1px solid #b68235;background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 2px,transparent 2px 9px)"></i>Dienstbesprechung</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;border:1px solid #b68235;background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 1.5px,transparent 1.5px 9px),repeating-linear-gradient(-45deg,#d9bd85 0 1.5px,transparent 1.5px 9px)"></i>Anleitergespräch</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:18px;height:12px;border-radius:3px;border:2px dotted #d7d3d3;background:#f8f4f4"></i>Pause</span>
 </div>
 </div>
-
 <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
-<div style="padding:9px 20px;border-top:1px solid #eae7e7;display:flex;align-items:center;gap:10px;background:#f3f2f2">
-<span style="font-size:11px;color:#605d5d;flex:1 1 260px" aria-live="polite">Ausgewählt: <strong style="color:#201f1d">{{ selectionLabel }}</strong><br />Block ziehen verschiebt, Ränder ziehen ändert die Dauer · Tastatur: ←/→ verschieben, Alt+←/→ Beginn, Umschalt+←/→ Ende</span>
-<div style="display:flex;flex-wrap:wrap;gap:6px" role="group" aria-label="Block anpassen">
-<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ nudgeEarlier }}" disabled="{{ nudgeDisabled }}">◂ 15 Min früher</button>
-<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ nudgeLater }}" disabled="{{ nudgeDisabled }}">15 Min später ▸</button>
-<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ endShorter }}" disabled="{{ nudgeDisabled }}">Ende −15</button>
-<button style="font:inherit;font-size:12px;background:#f8f4f4;border:1px solid #d7d3d3;padding:5px 9px;cursor:pointer" onClick="{{ endLonger }}" disabled="{{ nudgeDisabled }}">Ende +15</button>
+<div style="position:sticky;bottom:16px;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#2a2622;color:#fff;border-radius:20px;padding:12px 16px;box-shadow:0 12px 30px rgba(30,20,10,.28);margin-bottom:18px">
+<div style="flex:1 1 260px;font-size:13px" aria-live="polite"><strong>{{ selectionLabel }}</strong><div style="font-size:12px;color:#e3d9cc">Ziehen verschiebt · Ränder ziehen ändert die Dauer · Tastatur: ←/→, Alt = Beginn, Umschalt = Ende</div></div>
+<div role="group" aria-label="Block anpassen" style="display:flex;flex-wrap:wrap;gap:6px">
+<button style="font:inherit;font-size:13px;font-weight:600;border:none;border-radius:999px;padding:7px 12px;cursor:pointer;background:#4a4038;color:#fff" onClick="{{ nudgeEarlier }}" disabled="{{ nudgeDisabled }}">◂ 15 Min</button>
+<button style="font:inherit;font-size:13px;font-weight:600;border:none;border-radius:999px;padding:7px 12px;cursor:pointer;background:#4a4038;color:#fff" onClick="{{ nudgeLater }}" disabled="{{ nudgeDisabled }}">15 Min ▸</button>
+<button style="font:inherit;font-size:13px;font-weight:600;border:none;border-radius:999px;padding:7px 12px;cursor:pointer;background:#4a4038;color:#fff" onClick="{{ endShorter }}" disabled="{{ nudgeDisabled }}">Ende −15</button>
+<button style="font:inherit;font-size:13px;font-weight:600;border:none;border-radius:999px;padding:7px 12px;cursor:pointer;background:#4a4038;color:#fff" onClick="{{ endLonger }}" disabled="{{ nudgeDisabled }}">Ende +15</button>
 </div>
-<button style="font:inherit;font-size:12px;background:transparent;border:none;color:#605d5d;cursor:pointer;text-decoration:underline" onClick="{{ clearSelection }}">Auswahl aufheben</button>
+<button style="font:inherit;font-size:13px;background:transparent;border:none;color:#fff;cursor:pointer;text-decoration:underline" onClick="{{ clearSelection }}">Fertig</button>
 </div>
 </sc-if>
-
-<div style="padding:9px 20px;border-top:1px solid #eae7e7;display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:#605d5d">
-<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;background:#f2e6cf;vertical-align:-1px;margin-right:5px"></i>Betreuung (zählt auf Schlüssel)</span>
-<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;vertical-align:-1px;margin-right:5px;background-color:#f8f4f4;background-image:radial-gradient(#c9a463 1.3px,transparent 1.6px);background-size:8px 8px"></i>Verfügungszeit</span>
-<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;vertical-align:-1px;margin-right:5px;background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 2px,transparent 2px 9px)"></i>Dienstbesprechung</span>
-<span><i style="display:inline-block;width:16px;height:11px;border:1px solid #b68235;vertical-align:-1px;margin-right:5px;background-color:#f8f4f4;background-image:repeating-linear-gradient(45deg,#d9bd85 0 1.5px,transparent 1.5px 9px),repeating-linear-gradient(-45deg,#d9bd85 0 1.5px,transparent 1.5px 9px)"></i>Anleitergespräch</span>
-<span><i style="display:inline-block;width:16px;height:11px;border:2px dotted #d7d3d3;vertical-align:-1px;margin-right:5px;background:#f8f4f4"></i>Pause (weder Arbeits- noch Betreuungszeit)</span>
+<h2 style="font:700 20px/1.2 'Bricolage Grotesque',sans-serif;margin:8px 0 10px">Was am {{ dayFull }} auffällt</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:22px">
+<sc-for list="{{ rules }}" as="r" hint-placeholder-count="3"><div style="{{ r.cardStyle }}"><span style="{{ r.dotStyle }}"></span><div><div style="{{ r.titleStyle }}">{{ r.title }}</div><div style="font-size:13px;color:#4a433c;margin-top:2px;text-wrap:pretty">{{ r.desc }}</div></div></div></sc-for>
 </div>
-
-<div style="border-top:1px solid #d7d3d3;padding:14px 20px">
-<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;margin:0 0 8px;font-weight:600">Regelprüfung · {{ day }}</h2>
-<sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
-<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px dotted #eae7e7">
-<span style="flex:none;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border:1px solid;height:17px;line-height:14px;color:{{ r.color }};border-color:{{ r.color }}">{{ r.tagLabel }}</span>
-<span style="font-size:12px">{{ r.title }}<em style="display:block;font-style:normal;color:#605d5d;font-size:11px;margin-top:2px">{{ r.desc }}</em></span>
-</div>
+<details style="background:#fff;border-radius:18px;padding:14px 20px;margin-bottom:12px;box-shadow:0 1px 2px rgba(80,50,20,.06)">
+<summary style="cursor:pointer;font:700 16px/1.3 'Bricolage Grotesque',sans-serif">Wochenübersicht · {{ variantLabel }}</summary>
+<div style="margin-top:12px"><div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:11px;width:100%;min-width:640px">
+<tr>
+<th style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap;background:#faf5ee;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Person</th>
+<sc-for list="{{ weekDayLabels }}" as="wd" hint-placeholder-count="5">
+<th style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap;background:#faf5ee;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">{{ wd }}</th>
 </sc-for>
-</div>
-
+<th style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap;background:#faf5ee;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Ist</th>
+<th style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap;background:#faf5ee;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Soll</th>
+</tr>
+<sc-for list="{{ weekRows }}" as="wr" hint-placeholder-count="15">
+<tr>
+<td style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap"><strong>{{ wr.nm }}</strong></td>
+<sc-for list="{{ wr.cells }}" as="wc" hint-placeholder-count="5">
+<td style="{{ wc.style }}">{{ wc.label }}</td>
+</sc-for>
+<td style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap;font-weight:600">{{ wr.ist }}</td>
+<td style="border:1px solid #f1e8dc;padding:4px 6px;text-align:left;white-space:nowrap">{{ wr.soll }}</td>
+</tr>
+</sc-for>
+</table></div></div>
+</details>
 <sc-if value="{{ showPausenstaffel }}" hint-placeholder-val="{{ true }}">
-<div style="border-top:1px solid #d7d3d3;padding:14px 20px">
-<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;margin:0 0 8px;font-weight:600">Pausenstaffel · hinterlegte Regel</h2>
-<table style="border-collapse:collapse;font-size:11.5px;width:100%;max-width:520px">
+<details style="background:#fff;border-radius:18px;padding:14px 20px;margin-bottom:12px;box-shadow:0 1px 2px rgba(80,50,20,.06)">
+<summary style="cursor:pointer;font:700 16px/1.3 'Bricolage Grotesque',sans-serif">Pausenregeln</summary>
+<div style="margin-top:12px"><table style="border-collapse:collapse;font-size:11.5px;width:100%;max-width:520px">
 <thead><tr>
-<th style="border:1px solid #eae7e7;padding:5px 8px;text-align:left;background:#f3f2f2;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Arbeitszeit</th>
-<th style="border:1px solid #eae7e7;padding:5px 8px;text-align:left;background:#f3f2f2;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Volljährig · §4 ArbZG</th>
-<th style="border:1px solid #eae7e7;padding:5px 8px;text-align:left;background:#f3f2f2;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Unter 18 · §11 JArbSchG</th>
+<th style="border:1px solid #f1e8dc;padding:5px 8px;text-align:left;background:#faf5ee;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Arbeitszeit</th>
+<th style="border:1px solid #f1e8dc;padding:5px 8px;text-align:left;background:#faf5ee;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Volljährig · §4 ArbZG</th>
+<th style="border:1px solid #f1e8dc;padding:5px 8px;text-align:left;background:#faf5ee;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Unter 18 · §11 JArbSchG</th>
 </tr></thead>
 <tbody>
-<tr><td style="border:1px solid #eae7e7;padding:5px 8px">bis 4,5 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">keine</td><td style="border:1px solid #eae7e7;padding:5px 8px">keine</td></tr>
-<tr><td style="border:1px solid #eae7e7;padding:5px 8px">über 4,5 bis 6 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">keine</td><td style="border:1px solid #eae7e7;padding:5px 8px;color:#8a1f14;font-weight:600">30 min</td></tr>
-<tr><td style="border:1px solid #eae7e7;padding:5px 8px">über 6 bis 9 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">30 min</td><td style="border:1px solid #eae7e7;padding:5px 8px;color:#8a1f14;font-weight:600">60 min</td></tr>
-<tr><td style="border:1px solid #eae7e7;padding:5px 8px">über 9 h</td><td style="border:1px solid #eae7e7;padding:5px 8px">45 min</td><td style="border:1px solid #eae7e7;padding:5px 8px;color:#8a1f14;font-weight:600">60 min</td></tr>
+<tr><td style="border:1px solid #f1e8dc;padding:5px 8px">bis 4,5 h</td><td style="border:1px solid #f1e8dc;padding:5px 8px">keine</td><td style="border:1px solid #f1e8dc;padding:5px 8px">keine</td></tr>
+<tr><td style="border:1px solid #f1e8dc;padding:5px 8px">über 4,5 bis 6 h</td><td style="border:1px solid #f1e8dc;padding:5px 8px">keine</td><td style="border:1px solid #f1e8dc;padding:5px 8px;color:#8a1f14;font-weight:600">30 min</td></tr>
+<tr><td style="border:1px solid #f1e8dc;padding:5px 8px">über 6 bis 9 h</td><td style="border:1px solid #f1e8dc;padding:5px 8px">30 min</td><td style="border:1px solid #f1e8dc;padding:5px 8px;color:#8a1f14;font-weight:600">60 min</td></tr>
+<tr><td style="border:1px solid #f1e8dc;padding:5px 8px">über 9 h</td><td style="border:1px solid #f1e8dc;padding:5px 8px">45 min</td><td style="border:1px solid #f1e8dc;padding:5px 8px;color:#8a1f14;font-weight:600">60 min</td></tr>
 </tbody>
 </table>
 <div style="font-size:11px;color:#605d5d;margin-top:8px"><strong>Zusätzlich, unabhängig von der Staffel:</strong> länger als sechs Stunden am Stück ohne Ruhepause ist unzulässig, unabhängig davon, wo die Pflichtpause im Tag liegt.</div>
 </div>
+</details>
 </sc-if>
-
-<div style="border-top:1px solid #d7d3d3;padding:14px 20px">
-<h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6767;margin:0 0 8px;font-weight:600">Wochenübersicht · {{ variantLabel }}</h2>
-<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:11px;width:100%;min-width:640px">
-<tr>
-<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Person</th>
-<sc-for list="{{ weekDayLabels }}" as="wd" hint-placeholder-count="5">
-<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">{{ wd }}</th>
-</sc-for>
-<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Ist</th>
-<th style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;background:#f3f2f2;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#605d5d">Soll</th>
-</tr>
-<sc-for list="{{ weekRows }}" as="wr" hint-placeholder-count="15">
-<tr>
-<td style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap"><strong>{{ wr.nm }}</strong></td>
-<sc-for list="{{ wr.cells }}" as="wc" hint-placeholder-count="5">
-<td style="{{ wc.style }}">{{ wc.label }}</td>
-</sc-for>
-<td style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap;font-weight:600">{{ wr.ist }}</td>
-<td style="border:1px solid #eae7e7;padding:4px 6px;text-align:left;white-space:nowrap">{{ wr.soll }}</td>
-</tr>
-</sc-for>
-</table></div>
-</div>
-
-<div style="padding:10px 20px;font-size:11px;color:#605d5d;border-top:1px dashed #d7d3d3">
-Fachkraft = Erzieherin oder höher; PiVA-Auszubildende zählen hier <strong>nicht</strong> als Fachkraft (offener Punkt, siehe Briefing 7). Leitung (Ulrike) ist Reserve und taucht im Rahmenplan nicht auf. Nora und Lena sind im Rahmenplan mit ihrem Normalzustand gezeigt — ihr aktueller Langzeitausfall bzw. Krankenstand gehört in die „konkrete Woche", nicht in den Rahmenplan. Blöcke sind auswählbar; in der Testfassung per Ziehen oder mit den 15-Minuten-Tasten verschiebbar — rechnet Abdeckung und Regelprüfung sofort neu.
-</div>
+<p style="font-size:12.5px;color:#5f564c;max-width:760px;text-wrap:pretty;margin:18px 0 0">PiVA-Auszubildende zählen hier nicht als Fachkraft. Die Leitung ist Reserve und steht nicht im Plan. Krankheit und Urlaub gehören in die konkrete Woche, nicht in den Rahmenplan.</p>
 </sc-if>
-
+</div>
 <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
 <div style="position:fixed;inset:0;background:rgba(32,31,29,.35);z-index:50" onClick="{{ closeProfile }}"></div>
-<div style="position:fixed;top:0;right:0;height:100%;width:400px;max-width:92vw;background:#f8f4f4;border-left:1px solid #d7d3d3;box-shadow:-8px 0 24px rgba(32,31,29,.18);z-index:51;overflow-y:auto;padding:18px 20px 40px;font:13px/1.5 'Lora',serif;color:#201f1d">
+<div style="position:fixed;top:0;right:0;height:100%;width:400px;max-width:92vw;background:#fffaf3;border-left:1px solid #d7d3d3;box-shadow:-8px 0 24px rgba(32,31,29,.18);z-index:51;overflow-y:auto;padding:18px 20px 40px;font:14px/1.5 'Figtree',sans-serif;color:#201f1d">
 <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px">
-<h2 style="font:italic 600 20px/1.1 'Cormorant Garamond',serif;margin:0">{{ profile.nm }}</h2>
+<h2 style="font:800 26px/1.1 'Bricolage Grotesque',sans-serif;margin:0">{{ profile.nm }}</h2>
 <button style="font:inherit;font-size:12px;background:transparent;border:none;color:#605d5d;cursor:pointer" onClick="{{ closeProfile }}">Schließen ✕</button>
 </div>
 <div style="font-size:11px;color:#6b6767;margin-bottom:16px">Personalprofil · Einstellungen aus dem Briefing</div>
@@ -356,11 +316,12 @@ Zählt als Fachkraft
 </div>
 </sc-if>
 
-</div>
 
+</div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:1400},&quot;showPausenstaffel&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Anzeige&quot;}}">
 const OPEN=7, CLOSE=16.5, SPAN=CLOSE-OPEN;
+const VARIANT='A', CH=7;
 const pct = h => ((h-OPEN)/SPAN)*100;
 const t = h => String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0');
 const min = h => Math.round(h*60);
@@ -680,9 +641,9 @@ class Component extends DCLogic {
                 const full=t(b[0])+'–'+t(b[1]);
                 const ts=h=>{ const m=Math.round((h%1)*60); return Math.floor(h)+(m?':'+String(m).padStart(2,'0'):''); };
                 const short=ts(b[0])+'–'+ts(b[1]);
-                if(px>=full.length*6) return full;
-                if(px>=short.length*6) return short;
-                return px>=ts(b[0]).length*6 ? ts(b[0]) : '';
+                if(px>=full.length*CH) return full;
+                if(px>=short.length*CH) return short;
+                return (b[2]!=='pause'&&px>=ts(b[0]).length*CH) ? ts(b[0]) : '';
               })(),
               showBadge: !!(isSel||isDragging),
               badge: t(b[0])+'–'+t(b[1])+' · '+Math.floor(dur)+':'+String(Math.round((dur%1)*60)).padStart(2,'0')+' h',
@@ -777,7 +738,7 @@ class Component extends DCLogic {
       };
     }
 
-    return {
+    const __out={
       viewButtons:[
         {label:'Rahmenplan', pressed:isPlanView, style:isPlanView?btnOn:btnOff, onClick:()=>this.setState({view:'plan'})},
         {label:'Personal', pressed:isPersonalView, style:isPersonalView?btnOn:btnOff, onClick:()=>this.setState({view:'personal'})}
@@ -798,7 +759,7 @@ class Component extends DCLogic {
         const markStyle=base+(nv?'background:#8a1f14;color:#fff;':nh?'background:#f2e6cf;color:#7d5411;border:1px solid #b68235;':'background:#e3eee0;color:#2c6b2f;border:1px solid #9cc09a;');
         const aria=d+': '+(nv?nv+(nv===1?' Verstoß':' Verstöße'):'keine Verstöße')+(nh?', '+nh+(nh===1?' Hinweis':' Hinweise'):'');
         return {label:d, pressed:day===d, style:day===d?btnOn:btnOff, onClick:()=>this.setState({day:d,selected:null}),
-          mark: nv?String(nv):nh?'!':'✓', markStyle, aria};
+          mark: nv?String(nv):nh?'!':'✓', markStyle, aria, nv, nh};
       }),
       applyButtonStyle: btnBase+(variant==='test'?'background:#f8f4f4;color:#201f1d;':'background:#f3f2f2;color:#6b6767;border-color:#eae7e7;'),
       applyDisabled: variant!=='test',
@@ -816,6 +777,74 @@ class Component extends DCLogic {
       weekDayLabels:['Mo','Di','Mi','Do','Fr'],
       weekRows
     };
+    return this.decorate(__out,{rules,groups,S});
+  }
+  decorate(out,{rules,groups,S}){
+    const A=VARIANT==='A';
+    const TONE={v:{ink:'#9c2f1c',bg:'#fbe6df',dot:'#c8432b'},h:{ink:'#7a520f',bg:'#fbeed6',dot:'#d49a2a'},ok:{ink:'#2d6536',bg:'#e3f0df',dot:'#3f8f4c'}};
+    const kOf=r=>r.tagLabel==='Verstoß'?'v':r.tagLabel==='Hinweis'?'h':'ok';
+    const nv=rules.filter(r=>kOf(r)==='v').length, nh=rules.filter(r=>kOf(r)==='h').length;
+    const tone=TONE[nv?'v':nh?'h':'ok'];
+    rules.forEach(r=>{const T=TONE[kOf(r)]; r.bg=T.bg; r.ink=T.ink; r.dot=T.dot; r.dotStyle='width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px;background:'+T.dot; r.cardStyle=A?'display:flex;gap:12px;border-radius:16px;padding:14px 16px;background:'+T.bg:'display:flex;gap:10px;padding:12px 0;border-top:1px solid #ecebe6'; r.titleStyle='font-weight:600;color:'+T.ink;});
+    const DAYFULL={Mo:'Montag',Di:'Dienstag',Mi:'Mittwoch',Do:'Donnerstag',Fr:'Freitag'};
+    const GC=A?[{c:'#4f8a3f',s:'#e4efda'},{c:'#2f78a3',s:'#dcebf6'},{c:'#c2537a',s:'#f9e2eb'}]:[{c:'#3b3a36',s:'#ecebe6'},{c:'#3b3a36',s:'#ecebe6'},{c:'#3b3a36',s:'#ecebe6'}];
+    groups.forEach((g,gi)=>{
+      const gc=GC[gi%3], parts=g.name.replace('Gruppe ','').split(' · ');
+      g.short=parts[0]; g.sub=parts[1]||'';
+      g.dotStyle='width:12px;height:12px;border-radius:50%;flex:none;background:'+gc.c;
+      g.persons.forEach(p=>{
+        const pe=PEOPLE.find(x=>x.nm===p.nm);
+        p.initials=p.nm.slice(0,2); p.isFk=!!this.getProfile(pe.id).fk;
+        p.avatarStyle=A?"width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font:700 13px/1 'Bricolage Grotesque',sans-serif;background:"+gc.s+';color:'+gc.c
+          :"width:28px;height:28px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font:600 11px/1 'Instrument Sans',sans-serif;background:#ecebe6;color:#3b3a36";
+        p.blocks.forEach(b=>{
+          let s=b.style.replace('top:7px;height:24px;',A?'top:9px;height:34px;':'top:8px;height:28px;').replace('border-radius:2px;',A?'border-radius:9px;':'border-radius:5px;').replace('line-height:22px',A?'line-height:31px':'line-height:26px').replace('font-size:10.5px',A?'font-size:12px':'font-size:11.5px');
+          if(A) s=s.replace('background:#f2e6cf;border:1px solid #b68235;','background:'+gc.s+';border:1.5px solid '+gc.c+';');
+          b.style=s;
+        });
+      });
+    });
+    out.dayButtons.forEach(d=>{
+      const T=TONE[d.nv?'v':d.nh?'h':'ok'];
+      d.dayFull=DAYFULL[d.label];
+      d.statusShort=d.nv?(d.nv===1?'1 Problem':d.nv+' Probleme'):d.nh?(d.nh===1?'1 Hinweis':d.nh+' Hinweise'):'Alles gut';
+      d.dotStyle='width:8px;height:8px;border-radius:50%;flex:none;background:'+T.dot;
+      d.chipStyle=A?'display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:'+T.bg+';color:'+T.ink
+        :'display:inline-flex;align-items:center;gap:6px;font-size:12px;color:'+T.ink;
+      d.style=A?('font:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:14px 16px;border-radius:18px;min-width:0;'+(d.pressed?'background:#fff;border:2px solid #2a2622;box-shadow:0 8px 20px rgba(80,50,20,.12);':'background:#fffaf3;border:2px solid #efe4d4;'))
+        :('font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 2px 12px;margin-bottom:-1px;background:transparent;border:none;border-bottom:2px solid '+(d.pressed?'#1c1c1a':'transparent')+';color:'+(d.pressed?'#1c1c1a':'#5f5d58'));
+    });
+    const seg=on=>A?('font:inherit;font-size:13px;font-weight:600;border:none;border-radius:999px;padding:8px 16px;cursor:pointer;'+(on?'background:#fff;color:#2a2622;box-shadow:0 1px 3px rgba(60,40,20,.18);':'background:transparent;color:#5f564c;'))
+      :('font:inherit;font-size:13px;font-weight:500;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;'+(on?'background:#fff;color:#1c1c1a;box-shadow:0 1px 2px rgba(0,0,0,.12);':'background:transparent;color:#5f5d58;'));
+    out.viewButtons.forEach(b=>{b.style=seg(b.pressed);}); out.fassungButtons.forEach(b=>{b.style=seg(b.pressed);});
+    const dis=out.applyDisabled;
+    out.applyButtonStyle=A?('font:inherit;font-size:13px;font-weight:700;border:none;border-radius:999px;padding:10px 18px;'+(dis?'background:#efe6da;color:#7d7163;cursor:default;':'background:#c2552a;color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(194,85,42,.3);'))
+      :('font:inherit;font-size:13px;font-weight:500;border-radius:6px;padding:7px 14px;'+(dis?'border:1px solid #e2e0da;background:#f1f0ec;color:#7c7972;cursor:default;':'border:1px solid #1c1c1a;background:#1c1c1a;color:#fff;cursor:pointer;'));
+    out.dayFull=DAYFULL[out.day];
+    out.nvCount=String(nv);
+    out.statusTitle=nv?(nv===1?'1 Problem':nv+' Probleme'):nh?'Keine Probleme':'Alles gut besetzt';
+    out.statusSub=nv?'Diese Punkte sollten gelöst sein, bevor der Plan gilt.':nh?(nh===1?'1 Hinweis':nh+' Hinweise')+' zum Prüfen – sonst ist alles in Ordnung.':'Alle Regeln für diesen Tag sind erfüllt.';
+    out.statusBoxStyle=A?'display:flex;flex-wrap:wrap;align-items:center;gap:18px;border-radius:22px;padding:20px 24px;margin:0 0 18px;background:'+tone.bg+';color:'+tone.ink
+      :'background:#fff;border:1px solid #e4e2dc;border-radius:12px;padding:18px 20px;border-top:4px solid '+tone.dot;
+    out.statusNumStyle=A?"flex:none;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 28px/1 'Bricolage Grotesque',sans-serif;color:#fff;background:"+tone.dot
+      :"font:400 64px/1 'Instrument Serif',serif;color:"+tone.ink;
+    out.statusMark=nv?String(nv):nh?'!':'✓';
+    const maxT=Math.max(4,...S.map(s=>s.tot));
+    const isFS=h=>(h>=7&&h<7.5)||(h>=15&&h<16.5);
+    out.covBars=S.map(s=>{
+      const badT=isFS(s.h)&&s.tot<2, badF=s.fk<1;
+      const ht=Math.max(3,s.tot/maxT*100), fh=s.tot?s.fk/s.tot*100:0, fb=s.fk/maxT*92;
+      return {title:t(s.h)+' · '+s.tot+' Personen, davon '+s.fk+' Fachkräfte',
+        outer:'width:100%;border-radius:4px 4px 2px 2px;overflow:hidden;display:flex;align-items:flex-end;height:'+ht+'%;background:'+(badT||badF?'#f2b9aa':'#ecdcc3'),
+        inner:'width:100%;height:'+fh+'%;background:'+(badF?'#c8432b':'#a8753d'),
+        area:'position:absolute;left:0;right:0;bottom:0;height:'+(s.tot/maxT*92)+'%;background:'+(badT||badF?'#f4d3cb':'#dfe6e4'),
+        fkLine:'position:absolute;left:0;right:0;height:2px;bottom:calc('+fb+'% - 1px);background:'+(badF?'#c8432b':'#1f3b36')};
+    });
+    out.covMinStyle='position:absolute;left:0;right:0;bottom:'+(1/maxT*92)+'%;border-top:1px dashed #c8432b;pointer-events:none';
+    out.covHours=[];
+    for(let h=OPEN;h<CLOSE-0.5;h++){ const s=S.find(x=>Math.abs(x.h-h-0.5)<1e-9)||S.find(x=>Math.abs(x.h-h)<1e-9);
+      out.covHours.push({label:s.tot+' / '+s.fk, style:'position:absolute;top:0;text-align:center;font-size:11px;color:#6d655c;left:'+pct(h)+'%;width:'+(100/SPAN)+'%'}); }
+    return out;
   }
 }
 

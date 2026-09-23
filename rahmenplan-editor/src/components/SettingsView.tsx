@@ -40,8 +40,8 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
 
   return (
     <div className="settings">
-      <div className="section">
-        <h2 className="section-title">Kita</h2>
+      <div className="card">
+        <h2>Kita</h2>
         <div className="form-grid">
           <div>
             <label className="field-label" htmlFor={`${fid}-name`}>Name der Kita</label>
@@ -58,8 +58,8 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
         </div>
       </div>
 
-      <div className="section">
-        <h2 className="section-title">Gruppen</h2>
+      <div className="card">
+        <h2>Gruppen</h2>
         {data.groups.map((g, i) => {
           const members = data.persons.filter((p) => p.groupId === g.id).length;
           const upd = (patch: Partial<Group>) => setGroups(data.groups.map((x) => (x.id === g.id ? { ...x, ...patch } : x)));
@@ -93,8 +93,8 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
         </button>
       </div>
 
-      <div className="section">
-        <h2 className="section-title">Regeln</h2>
+      <div className="card">
+        <h2>Regeln</h2>
         <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>
           Die Startwerte stammen aus dem Prototyp und sind <strong>beispielhaft</strong>. Bitte vor dem echten Einsatz fachlich prüfen (z. B.
           Mindestpersonal nach HessKiföG, Betreuungsschlüssel je Gruppe). Ob jemand als Fachkraft zählt, wird im Personalprofil festgelegt.
@@ -121,7 +121,7 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
           </div>
         </div>
 
-        <h3 className="field-label" style={{ marginTop: 16 }}>Randzeiten (Früh-/Spätdienst)</h3>
+        <h3>Randzeiten (Früh-/Spätdienst)</h3>
         {s.randzeiten.map((r, i) => {
           const upd = (patch: Partial<typeof r>) => set({ randzeiten: s.randzeiten.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
           return (
@@ -137,7 +137,7 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
         })}
         <button className="linkbtn" onClick={() => set({ randzeiten: [...s.randzeiten, { start: s.open, end: s.open + 0.5, minPersonen: 2 }] })}>+ Randzeit</button>
 
-        <h3 className="field-label" style={{ marginTop: 16 }}>Pausenstaffel (Volljährige)</h3>
+        <h3>Pausenstaffel (Volljährige)</h3>
         {s.pausen.map((p, i) => {
           const upd = (patch: Partial<typeof p>) => set({ pausen: s.pausen.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
           return (
@@ -161,20 +161,20 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
         </div>
       </div>
 
-      <div className="section">
-        <h2 className="section-title">Daten</h2>
+      <div className="card">
+        <h2>Daten</h2>
         <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>
           Alle Daten liegen nur in diesem Browser auf diesem Rechner. Sie gehen verloren, wenn die Browserdaten gelöscht werden, die Datei an einen
           anderen Ort verschoben oder ein anderer Browser genutzt wird. Exportiere deshalb regelmäßig eine Sicherung und lege sie z. B. auf einem
           USB-Stick oder Netzlaufwerk ab. Letzte Sicherung: <strong>{fmtDate(data.meta.lastBackup)}</strong>.
         </p>
         <div className="list-row">
-          <button className="btn primary" onClick={onBackup}>Sicherung exportieren (.json)</button>
-          <button className="btn" onClick={onImport}>Sicherung importieren …</button>
+          <button className="cta" onClick={onBackup}>Sicherung exportieren (.json)</button>
+          <button className="pill" onClick={onImport}>Sicherung importieren …</button>
         </div>
         <div className="list-row" style={{ marginTop: 10 }}>
-          <button className="btn" onClick={onLoadSample}>Beispieldaten laden …</button>
-          <button className="btn danger" onClick={onStartEmpty}>Leer beginnen …</button>
+          <button className="pill" onClick={onLoadSample}>Beispieldaten laden …</button>
+          <button className="pill danger" onClick={onStartEmpty}>Leer beginnen …</button>
         </div>
       </div>
     </div>
