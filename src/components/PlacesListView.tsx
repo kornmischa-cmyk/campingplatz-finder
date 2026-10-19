@@ -1,6 +1,7 @@
 "use client";
 
 import { Place, StatusFilter, TypeFilter } from "@/lib/types";
+import { fmtH } from "@/lib/places";
 import { Chip } from "./Chip";
 
 const TYPE_LABELS: Record<keyof TypeFilter, string> = { zelt: "Zelt", wowa: "Wowa", haus: "Haus", trek: "Trekking" };
@@ -14,6 +15,9 @@ export function PlacesListView({
   onToggleType,
   onSetStatus,
   onOpen,
+  onRecalcAll,
+  recalcing,
+  recalcProgress,
 }: {
   places: Place[];
   types: TypeFilter;
@@ -23,6 +27,9 @@ export function PlacesListView({
   onToggleType: (t: keyof TypeFilter) => void;
   onSetStatus: (s: StatusFilter) => void;
   onOpen: (id: number) => void;
+  onRecalcAll: () => void;
+  recalcing: boolean;
+  recalcProgress: { done: number; total: number } | null;
 }) {
   const query = search.trim().toLowerCase();
 
@@ -53,6 +60,18 @@ export function PlacesListView({
         <Chip active={status === "wunsch"} activeColor="var(--petrol-text)" onClick={() => onSetStatus("wunsch")}>✎ Wunsch</Chip>
       </div>
 
+      <button
+        type="button"
+        onClick={onRecalcAll}
+        disabled={recalcing}
+        className="rounded-lg px-3 py-2 text-[11px]"
+        style={{ border: "1px solid var(--accent)", color: "var(--accent)", opacity: recalcing ? 0.6 : 1 }}
+      >
+        {recalcing
+          ? `Fahrzeiten werden neu berechnet … (${recalcProgress?.done ?? 0}/${recalcProgress?.total ?? 0})`
+          : "Alle Fahrzeiten neu berechnen"}
+      </button>
+
       <div className="text-[10px] tracking-[1px]" style={{ color: "var(--text-dim)" }}>
         ALLE PLÄTZE ({filtered.length})
       </div>
@@ -65,6 +84,9 @@ export function PlacesListView({
             className="flex items-center gap-3 rounded-xl px-3 py-[11px] cursor-pointer"
             style={{ background: "var(--bg-card)" }}
           >
+            <div className="font-mono font-bold text-sm min-w-[38px] flex-none" style={{ color: "var(--accent)" }}>
+              {fmtH(p.hours)}h
+            </div>
             <div className="flex-1 min-w-0">
               <div className="text-[12.5px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{p.name}</div>
               <div className="text-[10px] whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: "var(--text-dim)" }}>

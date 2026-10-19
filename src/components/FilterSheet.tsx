@@ -34,7 +34,7 @@ export function FilterSheet({
   onReset: () => void;
 }) {
   return (
-    <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
+    <div className="absolute inset-0 z-[5] flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-[18px] flex justify-between items-center border-b" style={{ borderColor: "var(--border)" }}>
         <div onClick={onClose} className="text-xs cursor-pointer" style={{ color: "var(--text-dim)" }}>
           ✕ schließen

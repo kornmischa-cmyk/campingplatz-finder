@@ -20,7 +20,7 @@ export function AddFlowStep1({
   onAnalyze: () => void;
 }) {
   return (
-    <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
+    <div className="absolute inset-0 z-[5] flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-[18px] flex justify-between border-b" style={{ borderColor: "var(--border)" }}>
         <div onClick={onCancel} className="text-xs cursor-pointer" style={{ color: "var(--text-dim)" }}>
           ✕ abbrechen
@@ -86,7 +86,7 @@ export function AddFlowStep2({
   onConfirm: () => void;
 }) {
   return (
-    <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
+    <div className="absolute inset-0 z-[5] flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-[18px] flex justify-between border-b" style={{ borderColor: "var(--border)" }}>
         <div onClick={onBack} className="text-xs cursor-pointer" style={{ color: "var(--text-dim)" }}>
           ← zurück

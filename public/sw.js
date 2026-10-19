@@ -1,4 +1,4 @@
-const CACHE_NAME = "camping-finder-shell-v1";
+const CACHE_NAME = "camping-finder-shell-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -16,6 +16,10 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first: always try to fetch the latest deploy. Only fall back to the
+// cached app shell when offline — never silently serve a stale cached version
+// while online, which previously made deployed fixes invisible until the
+// cache happened to be cleared.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
@@ -23,17 +27,15 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
+

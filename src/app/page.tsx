@@ -40,6 +40,8 @@ export default function Home() {
   const [editId, setEditId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<EditPlaceDraft | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [recalcing, setRecalcing] = useState(false);
+  const [recalcProgress, setRecalcProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 900);
@@ -176,6 +178,37 @@ export default function Home() {
     showToast("Änderungen gespeichert");
     setEditId(null);
     setEditDraft(null);
+  }
+
+  async function recalcAllDrives() {
+    setRecalcing(true);
+    const targets = places;
+    setRecalcProgress({ done: 0, total: targets.length });
+    let updated = 0;
+    let failed = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const p = targets[i];
+      try {
+        const res = await fetch("/api/estimate-drive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: p.name, region: p.region }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setPlaces((ps) => ps.map((x) => (x.id === p.id ? { ...x, hours: data.hours, bearing: data.bearing } : x)));
+          updated++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+      setRecalcProgress({ done: i + 1, total: targets.length });
+    }
+    setRecalcing(false);
+    setRecalcProgress(null);
+    showToast(`${updated} Fahrzeiten aktualisiert${failed ? `, ${failed} fehlgeschlagen` : ""}`);
   }
 
   function startAdd() {
@@ -417,6 +450,9 @@ export default function Home() {
               onToggleType={toggleListType}
               onSetStatus={setListStatus}
               onOpen={setDetailId}
+              onRecalcAll={recalcAllDrives}
+              recalcing={recalcing}
+              recalcProgress={recalcProgress}
             />
           )}
         </div>
@@ -426,7 +462,7 @@ export default function Home() {
       {!loading && (
         <div
           onClick={startAdd}
-          className="absolute right-4 bottom-4 w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold cursor-pointer z-2"
+          className="absolute right-4 bottom-4 w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold cursor-pointer z-[2]"
           style={{ background: "var(--accent)", color: "#161b18", boxShadow: "0 8px 20px rgba(244,163,92,.4)" }}
         >
           +

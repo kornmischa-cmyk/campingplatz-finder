@@ -92,7 +92,7 @@ export function DetailSheet({
   const strom = stromMap[place.strom];
 
   return (
-    <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
+    <div className="absolute inset-0 z-[5] flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-4 flex justify-between items-start border-b" style={{ borderColor: "var(--border)" }}>
         <div>
           <div className="text-[9px] tracking-[1px]" style={{ color: "var(--text-dim)" }}>

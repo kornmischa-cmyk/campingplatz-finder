@@ -63,7 +63,7 @@ export function EditPlaceSheet({
   }
 
   return (
-    <div className="absolute inset-0 z-5 flex flex-col" style={{ background: "var(--bg-app)" }}>
+    <div className="absolute inset-0 z-[5] flex flex-col" style={{ background: "var(--bg-app)" }}>
       <div className="px-5 py-[18px] flex justify-between border-b" style={{ borderColor: "var(--border)" }}>
         <div onClick={onCancel} className="text-xs cursor-pointer" style={{ color: "var(--text-dim)" }}>
           ✕ abbrechen
