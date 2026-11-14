@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { AppData, Day, Variant } from '../domain/types';
 import { DAYS, TYPE_LABEL } from '../domain/types';
-import { evaluateDay, fkShort, totShort, weekTable, type DayResult } from '../domain/rules';
+import { evaluateDay, fkShort, totShort, weekTable, type DayResult, type Finding } from '../domain/rules';
 import { blocksOf, templateFor } from '../domain/plan';
 import { applyDrag, canDrag, isLocked, planDrag, type DragMode } from '../domain/drag';
 import { fmt, fmtDecimal, fmtShort, STEP } from '../domain/time';
@@ -11,6 +11,7 @@ import { fmtDate } from '../lib/download';
 import { Timeline, type Selection } from './Timeline';
 import type { ConfirmRequest } from './ConfirmDialog';
 import { LockIcon } from './Icons';
+import { TermineCard } from './TermineCard';
 import { groupColor } from '../domain/groups';
 
 interface Props {
@@ -23,11 +24,12 @@ interface Props {
   onOpenProfile: (personId: string, opener: HTMLElement) => void;
   confirm: (r: ConfirmRequest) => void;
   goTo: (view: 'personal' | 'settings') => void;
+  notify: (msg: string) => void;
 }
 
 const DAY_FULL: Record<Day, string> = { Mo: 'Montag', Di: 'Dienstag', Mi: 'Mittwoch', Do: 'Donnerstag', Fr: 'Freitag' };
 
-export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onOpenProfile, confirm, goTo }: Props) {
+export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onOpenProfile, confirm, goTo, notify }: Props) {
   const { settings, persons } = data;
   const hasTest = !!data.plans.test;
   const effVariant: Variant = variant === 'test' && hasTest ? 'test' : 'geltend';
@@ -37,9 +39,9 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
 
   const results = useMemo(() => {
     const r = {} as Record<Day, DayResult>;
-    for (const d of DAYS) r[d] = evaluateDay(persons, plan, d, settings);
+    for (const d of DAYS) r[d] = evaluateDay(persons, plan, d, settings, data.termine);
     return r;
-  }, [persons, plan, settings]);
+  }, [persons, plan, settings, data.termine]);
   const result = results[day];
 
   const select = (s: Selection | null) => {
@@ -66,7 +68,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
     const wf = dienstWochenFindings(persons, pl, settings);
     return DAYS.reduce(
       (acc, d) => {
-        const c = evaluateDay(persons, pl, d, settings).counts;
+        const c = evaluateDay(persons, pl, d, settings, data.termine).counts;
         return { v: acc.v + c.v, h: acc.h + c.h };
       },
       { v: wf.filter((f) => f.kind === 'v').length, h: wf.filter((f) => f.kind === 'h').length },
@@ -116,6 +118,26 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
   const variantLabel = effVariant === 'test' ? 'Testfassung' : 'Geltender Plan';
   const week = weekTable(persons, plan);
   const wochenFindings = useMemo(() => dienstWochenFindings(persons, plan, settings), [persons, plan, settings]);
+  const personFindings = useMemo(() => {
+    const m: Record<string, Finding[]> = {};
+    for (const f of [...result.findings, ...wochenFindings]) if (f.personId) (m[f.personId] ??= []).push(f);
+    return m;
+  }, [result, wochenFindings]);
+  const actionsFor = (f: Finding) =>
+    f.personId && effVariant === 'test' && (f.canInsertPause || f.canResetFromProfile) ? (
+      <span className="finding-actions">
+        {f.canInsertPause && (
+          <button className="linkbtn" onClick={() => dispatch({ type: 'insertPause', personId: f.personId!, day })}>
+            Pause einfügen
+          </button>
+        )}
+        {f.canResetFromProfile && (
+          <button className="linkbtn" onClick={() => dispatch({ type: 'resetDayFromProfile', personId: f.personId!, day })}>
+            Normalzeit übernehmen
+          </button>
+        )}
+      </span>
+    ) : null;
   const span = settings.close - settings.open;
   const pct = (h: number) => ((h - settings.open) / span) * 100;
   const randText = settings.randzeiten.map((r) => `${fmtShort(r.start)}–${fmtShort(r.end)} mind. ${r.minPersonen}`).join(', ');
@@ -141,7 +163,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
   }
   const missing = missingCount(data, plan);
   const missingNames = persons
-    .filter((p) => DAYS.some((d) => !blocksOf(plan, p.id, d).length && templateFor(p, d).length))
+    .filter((p) => DAYS.some((d) => !blocksOf(plan, p.id, d).length && templateFor(p, d, data).length))
     .map((p) => p.name)
     .join(', ');
   const unlockable = !!selBlock && effVariant === 'test' && isLocked(selBlock) && (selBlock.type === 'betreuung' || selBlock.type === 'verfuegung');
@@ -256,6 +278,17 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
         </div>
       </div>
 
+      <TermineCard
+        data={data}
+        day={day}
+        dispatch={dispatch}
+        confirm={confirm}
+        onApplied={(msg) => {
+          setVariant('test');
+          notify(msg);
+        }}
+      />
+
       <div className="card">
         <div className="scroll-x">
           <div className="tl-inner">
@@ -269,6 +302,8 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               onSelect={select}
               dispatch={dispatch}
               onOpenProfile={onOpenProfile}
+              personFindings={personFindings}
+              renderActions={actionsFor}
             />
 
             <div className="coverage">
@@ -387,11 +422,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                 {f.title}
               </div>
               <div className="finding-desc">{f.desc}</div>
-              {f.canResetFromProfile && f.personId && effVariant === 'test' && (
-                <button className="linkbtn" onClick={() => dispatch({ type: 'resetDayFromProfile', personId: f.personId!, day })}>
-                  Normalzeit übernehmen
-                </button>
-              )}
+              {actionsFor(f)}
             </div>
           </div>
         ))}

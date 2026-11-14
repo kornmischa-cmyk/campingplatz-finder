@@ -34,7 +34,6 @@ export function PersonalView({ data, dispatch, onOpenProfile, onNewPerson }: Pro
       soll: 20,
       workdays: ['Mo', 'Di', 'Mi', 'Do', 'Fr'],
       normBlocks: [{ id: uid('n'), start: 8, end: 12, type: 'betreuung', verb: 'weich' }],
-      tueBlocks: null,
       mentorId: '',
       notiz: '',
     };

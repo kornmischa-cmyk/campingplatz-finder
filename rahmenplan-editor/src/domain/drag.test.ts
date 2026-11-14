@@ -70,11 +70,11 @@ describe('planDrag / applyDrag', () => {
 });
 
 describe('canDrag', () => {
-  it('nur in der Testfassung, nur Betreuung/Verfügung, nicht gesperrt', () => {
+  it('nur in der Testfassung, Betreuung/Verfügung/Pause, nicht gesperrt', () => {
     expect(canDrag(B(8, 9), 'geltend')).toBe(false);
     expect(canDrag(B(8, 9), 'test')).toBe(true);
     expect(canDrag(B(8, 9, 'verfuegung'), 'test')).toBe(true);
-    expect(canDrag(B(8, 9, 'pause'), 'test')).toBe(false);
+    expect(canDrag(B(8, 9, 'pause'), 'test')).toBe(true);
     expect(canDrag(B(8, 9, 'besprechung'), 'test')).toBe(false);
     expect(canDrag(B(8, 9, 'betreuung', { verb: 'hart' }), 'test')).toBe(false);
     expect(canDrag(B(8, 9, 'betreuung', { verb: 'hart', unlocked: true }), 'test')).toBe(true);

@@ -236,6 +236,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               onOpenProfile={openProfile}
               confirm={setConfirmReq}
               goTo={setView}
+              notify={setToast}
             />
           )}
           {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} onNewPerson={newPerson} />}

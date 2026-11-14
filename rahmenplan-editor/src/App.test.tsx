@@ -136,4 +136,34 @@ describe('App (Smoke)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
     expect(screen.getByText('Tina: 5× Frühdienst (höchstens 2×)')).toBeTruthy();
   });
+
+  it('Termin für alle anlegen: zusätzlicher Block in der Testfassung', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Termin' }));
+    fireEvent.change(screen.getByLabelText('Bezeichnung'), { target: { value: 'Teamrunde' } });
+    fireEvent.change(screen.getByLabelText('Beginn'), { target: { value: '15' } });
+    fireEvent.change(screen.getByLabelText('Ende'), { target: { value: '16' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Termin speichern' }));
+    expect(screen.getByText('Teamrunde')).toBeTruthy();
+    // Selin arbeitet Mo 9–14 → Besprechung kommt als zusätzlicher Block, Betreuung bleibt bis 14:00
+    expect(screen.getByRole('img', { name: /^Selin, Dienstbesprechung, 15:00 bis 16:00/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Selin, Betreuung, 12:00 bis 14:00/ })).toBeTruthy();
+  });
+
+  it('Abzeichen an der Person zeigt ihre Probleme, „Pause einfügen“ behebt die fehlende Pause', () => {
+    const d = emptyData();
+    const block = (start: number, end: number) => ({ id: `b${start}`, start, end, type: 'betreuung' as const, verb: 'weich' as const });
+    d.persons = [{ id: 'a', name: 'Anna', qual: 'Erzieherin', fk: true, groupId: 'g1', soll: 39, workdays: ['Mo'], normBlocks: [block(7, 16.5)], mentorId: '', notiz: '' }];
+    d.plans.test = { since: '', blocks: { a: { Mo: [block(7, 16.5)] } } };
+    renderApp(d);
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    fireEvent.click(screen.getByRole('button', { name: /^Anna: 2 Verstöße, 2 Hinweise anzeigen$/ }));
+    const pop = screen.getByRole('dialog', { name: 'Probleme bei Anna' });
+    expect(within(pop).getByText(/Pflichtpause fehlt/)).toBeTruthy();
+    fireEvent.click(within(pop).getAllByRole('button', { name: 'Pause einfügen' })[0]);
+    expect(screen.getByRole('button', { name: /^Anna, Pause, 11:30 bis 12:00/ })).toBeTruthy();
+    // Pflichtpause und „am Stück“ behoben, Abweichung weg; übrig bleibt der Hinweis „über 8 h“
+    expect(screen.getByRole('button', { name: 'Anna: 1 Hinweis anzeigen' })).toBeTruthy();
+  });
 });

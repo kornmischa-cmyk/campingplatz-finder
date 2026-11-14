@@ -3,6 +3,9 @@
 import type { Block, Day, Person, Plan, Settings } from './types';
 import { STEP, EPS, fmt, fmtDecimal, minutes } from './time';
 import { blocksOf, deviation } from './plan';
+import { isTerminBlock, pauseHours, requiredPause, workHours } from './pause';
+import { TYPE_LABEL } from './types';
+import type { Termin } from './types';
 import { dienstTagFindings } from './dienste';
 
 export interface Slot {
@@ -22,6 +25,8 @@ export interface Finding {
   personId?: string;
   /** Plan dieser Person/dieses Tags kann aus den Normalzeiten neu erzeugt werden */
   canResetFromProfile?: boolean;
+  /** Fehlende Pause lässt sich automatisch einfügen */
+  canInsertPause?: boolean;
 }
 
 export interface Span {
@@ -29,20 +34,7 @@ export interface Span {
   end: number;
 }
 
-export function workHours(blocks: Block[]): number {
-  return blocks.filter((b) => b.type !== 'pause').reduce((a, b) => a + (b.end - b.start), 0);
-}
-
-export function pauseHours(blocks: Block[]): number {
-  return blocks.filter((b) => b.type === 'pause').reduce((a, b) => a + (b.end - b.start), 0);
-}
-
-/** Geforderte Pause (h) nach Pausenstaffel */
-export function requiredPause(az: number, settings: Settings): number {
-  let req = 0;
-  for (const s of settings.pausen) if (az > s.abStunden + EPS) req = Math.max(req, s.minuten / 60);
-  return req;
-}
+export { workHours, pauseHours, requiredPause } from './pause';
 
 /** Längste zusammenhängende Arbeitsstrecke ohne Pausenblock (Lücken zählen als Unterbrechung) */
 export function longestStretch(blocks: Block[]): number {
@@ -119,7 +111,7 @@ export interface DayResult {
   counts: { v: number; h: number };
 }
 
-export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: Settings): DayResult {
+export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: Settings, termine: Termin[] = []): DayResult {
   const slots = computeSlots(persons, plan, day, settings);
   const L: Finding[] = [];
 
@@ -150,7 +142,7 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
   let anwesend = 0;
   for (const p of persons) {
     const bl = blocksOf(plan, p.id, day);
-    const dev = deviation(p, bl, day);
+    const dev = deviation(p, bl, day, { settings, termine });
 
     if (bl.length) {
       anwesend++;
@@ -161,6 +153,7 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
         L.push({
           kind: 'v',
           personId: p.id,
+          canInsertPause: true,
           title: `${p.name}: Pflichtpause fehlt · ${minutes(pz)} statt ${minutes(req)} Minuten`,
           desc: `Bei ${fmtDecimal(az)} h Arbeitszeit sind ${minutes(req)} Minuten Pause vorgeschrieben.`,
         });
@@ -187,7 +180,9 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
 
     L.push(...dienstTagFindings(p, bl, day, settings));
 
-    for (const hb of dev.hardChanged) {
+    const hardTermin = dev.hardChanged.filter(isTerminBlock);
+    const hardOther = dev.hardChanged.filter((b) => !isTerminBlock(b));
+    for (const hb of hardOther) {
       L.push({
         kind: 'h',
         personId: p.id,
@@ -196,7 +191,18 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
         desc: 'Dieser Block ist im Profil als unverrückbar hinterlegt. Die Abweichung vor der Übernahme mit der Person klären.',
       });
     }
-    if (dev.deviates && !dev.hardChanged.length) {
+    if (bl.length) {
+      for (const hb of hardTermin) {
+        L.push({
+          kind: 'h',
+          personId: p.id,
+          canResetFromProfile: true,
+          title: `${p.name}: ${TYPE_LABEL[hb.type]} ${fmt(hb.start)}–${fmt(hb.end)} fehlt im Plan`,
+          desc: 'Termin aus dem Rahmenplan, an dem die Person teilnimmt, wenn sie an dem Tag arbeitet.',
+        });
+      }
+    }
+    if (dev.deviates && !hardOther.length && (!bl.length || dev.deviatesBeyondTermine)) {
       L.push({
         kind: 'h',
         personId: p.id,
@@ -209,11 +215,12 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
     }
   }
 
-  if (settings.besprechungsTag === day && anwesend > 0) {
+  // Nur melden, wenn an dem Tag eine Besprechung stattfindet, aber nicht alle Anwesenden dabei sind
+  if (teilnehmende > 0 && teilnehmende < anwesend) {
     L.push({
       kind: 'h',
       title: `Dienstbesprechung: ${teilnehmende} von ${anwesend} anwesenden Personen nehmen teil`,
-      desc: 'Nachmittags sind bereits viele Teilzeitkräfte gegangen.',
+      desc: 'Nicht alle, die an diesem Tag arbeiten, sind bei der Besprechung eingeplant.',
     });
   }
 

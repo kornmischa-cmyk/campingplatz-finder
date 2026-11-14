@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import type { AppData, Block, Day, Plan, Variant } from '../domain/types';
 import { TYPE_LABEL } from '../domain/types';
 import { applyDrag, canDrag, isLocked, planDrag, pxToDelta, type DragMode, type DragPlan } from '../domain/drag';
 import { blocksOf } from '../domain/plan';
-import type { DayResult } from '../domain/rules';
+import type { DayResult, Finding } from '../domain/rules';
 import { workHours } from '../domain/rules';
 import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP } from '../domain/time';
 import type { Action } from '../state/store';
@@ -26,6 +26,9 @@ interface Props {
   onSelect: (s: Selection | null) => void;
   dispatch: (a: Action) => void;
   onOpenProfile: (personId: string, opener: HTMLElement) => void;
+  /** Befunde je Person (Tag + Woche) für das Abzeichen am Namen */
+  personFindings: Record<string, Finding[]>;
+  renderActions: (f: Finding) => ReactNode;
 }
 
 interface DragState {
@@ -51,7 +54,22 @@ function blockLabel(b: Block, px: number): string {
   return b.type !== 'pause' && px >= s.length * CH ? s : '';
 }
 
-export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile }: Props) {
+export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions }: Props) {
+  const [openBadge, setOpenBadge] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openBadge) return;
+    const close = (e: Event) => {
+      if (e.type === 'keydown' && (e as globalThis.KeyboardEvent).key !== 'Escape') return;
+      if (e.type === 'mousedown' && (e.target as HTMLElement).closest('.p-pop, .p-badge')) return;
+      setOpenBadge(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [openBadge]);
   const { settings } = data;
   const { open, close } = settings;
   const span = close - open;
@@ -192,9 +210,44 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           {p.name}
                         </button>
                         {p.fk && <span className="fk-pill" title="Fachkraft">FK</span>}
+                        {(() => {
+                          const fs = personFindings[p.id] ?? [];
+                          if (!fs.length) return null;
+                          const nv = fs.filter((f) => f.kind === 'v').length;
+                          const nh = fs.length - nv;
+                          const label = `${p.name}: ${nv ? `${nv} ${nv === 1 ? 'Verstoß' : 'Verstöße'}` : ''}${nv && nh ? ', ' : ''}${nh ? `${nh} ${nh === 1 ? 'Hinweis' : 'Hinweise'}` : ''} anzeigen`;
+                          return (
+                            <button
+                              className={`p-badge tone-${nv ? 'v' : 'h'}`}
+                              aria-label={label}
+                              title={label}
+                              aria-expanded={openBadge === p.id}
+                              onClick={() => setOpenBadge(openBadge === p.id ? null : p.id)}
+                            >
+                              {nv ? nv : '!'}
+                            </button>
+                          );
+                        })()}
                       </div>
                       <div className="person-meta" title={meta}>{meta}</div>
                     </div>
+                    {openBadge === p.id && (
+                      <div className="p-pop" role="dialog" aria-label={`Probleme bei ${p.name}`}>
+                        <strong>{p.name}</strong>
+                        <ul>
+                          {(personFindings[p.id] ?? []).map((f, i) => (
+                            <li key={i} className={`tone-${f.kind}`}>
+                              <span className="dot" />
+                              <span>
+                                {f.title.replace(`${p.name}: `, '')}
+                                <small>{f.desc}</small>
+                                {renderActions(f)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                   <div className="lane" style={{ background: `repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${100 / span}%)` }}>
                     {blocks.map((b, idx) => {

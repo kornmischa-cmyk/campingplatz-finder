@@ -19,6 +19,24 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Pausen, Termine, Personen-Indikator (14.11.2026)
+
+- **Automatische Pause:** Ergibt sich aus Normalarbeitszeiten und Terminen eine Arbeitszeit, die eine Pause verlangt,
+  und fehlt sie, plant die Vorlage die kleinste ausreichende Pause (Pausenstaffel aus den Einstellungen) in die Mitte
+  des Dienstes – nur in Betreuung/Verfügungszeit, nie in einen Termin. Beispiel 7:00–16:30: 30 Min (danach 9 h Arbeit).
+  Pro Person kann eine längere Pause eingestellt werden. Pausen lassen sich in der Testfassung verschieben;
+  bei „Pflichtpause fehlt“ gibt es „Pause einfügen“.
+- **Termine im Rahmenplan** ersetzen den „Dienstag-Sonderfall“ im Profil: Bezeichnung, Art, Tag, Uhrzeit,
+  Teilnehmende = alle, die an dem Tag arbeiten, oder ausgewählte Personen. Ein Termin ist ein **zusätzlicher Block**;
+  überlappende Zeiten werden herausgeschnitten, Dienste werden nicht verlängert. Speichern/Löschen trägt den Termin
+  sofort in die Testfassung ein (unveränderte Tage werden neu erzeugt, von Hand geänderte nur um den Termin-Block ergänzt).
+  Alte Plandateien werden beim Laden umgewandelt (gleiche Blöcke mehrerer Personen → ein Termin; alle Dienstags-
+  Arbeitenden → „alle“).
+- Folge der Regel „alle nehmen teil“: Während einer Besprechung für alle betreut niemand – die App meldet das als
+  Verstoß. Ob das so gewollt ist (z. B. Besprechung nach Schließung), ist fachlich zu klären.
+- **Indikator an der Person:** Abzeichen am Namen (Anzahl Verstöße bzw. „!“), Klick zeigt die Probleme der Person
+  für den Tag und die Woche mit Aktionen.
+
 ## Früh- und Spätdienst pro Person (14.11.2026)
 
 - Frühdienst/Spätdienst = die Person ist in einer Früh- bzw. Spät-Randzeit (Einstellungen → Randzeiten) in der Betreuung.

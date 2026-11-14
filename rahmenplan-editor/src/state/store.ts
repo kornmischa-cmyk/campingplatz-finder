@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { AppData, Block, Day, Group, Person, Settings } from '../domain/types';
 import { DAYS } from '../domain/types';
-import { adoptTest, blocksOf, clonePlan, templateFor, withDayBlocks } from '../domain/plan';
+import { adoptTest, blocksOf, clonePlan, insertTermin, sameDay, templateFor, withDayBlocks } from '../domain/plan';
+import { withAutoPause } from '../domain/pause';
+import type { Termin } from '../domain/types';
 import { parseBackup, toBackup } from '../domain/storage';
 import type { Backend } from '../lib/fileStore';
 import { uid } from '../domain/time';
@@ -17,6 +19,9 @@ export type Action =
   | { type: 'resetDayFromProfile'; personId: string; day: Day }
   | { type: 'setUnlocked'; personId: string; day: Day; blockId: string; unlocked: boolean }
   | { type: 'fillMissingFromProfiles' }
+  | { type: 'insertPause'; personId: string; day: Day }
+  | { type: 'saveTermin'; termin: Termin }
+  | { type: 'deleteTermin'; id: string }
   | { type: 'createTest' }
   | { type: 'discardTest' }
   | { type: 'adoptTest' }
@@ -54,7 +59,7 @@ export function reducer(state: AppData, a: Action): AppData {
     case 'resetDayFromProfile': {
       const person = state.persons.find((p) => p.id === a.personId);
       if (!state.plans.test || !person) return state;
-      const fresh = templateFor(person, a.day).map((b) => ({ ...b, id: uid('b') }));
+      const fresh = templateFor(person, a.day, state).map((b) => ({ ...b, id: uid('b') }));
       return { ...state, plans: { ...state.plans, test: withDayBlocks(state.plans.test, a.personId, a.day, fresh) } };
     }
     case 'setUnlocked': {
@@ -72,11 +77,50 @@ export function reducer(state: AppData, a: Action): AppData {
       for (const p of state.persons) {
         for (const d of DAYS) {
           if (blocksOf(test, p.id, d).length) continue;
-          const tpl = templateFor(p, d);
+          const tpl = templateFor(p, d, state);
           if (tpl.length) test = withDayBlocks(test, p.id, d, tpl.map((b) => ({ ...b, id: uid('b') })));
         }
       }
       return { ...state, plans: { ...state.plans, test } };
+    }
+    case 'insertPause': {
+      const person = state.persons.find((p) => p.id === a.personId);
+      if (!state.plans.test || !person) return state;
+      const bl = withAutoPause(blocksOf(state.plans.test, a.personId, a.day), state.settings, person.pauseMinuten ?? 0, uid('pause'));
+      return { ...state, plans: { ...state.plans, test: withDayBlocks(state.plans.test, a.personId, a.day, bl) } };
+    }
+    case 'saveTermin':
+    case 'deleteTermin': {
+      const id = a.type === 'saveTermin' ? a.termin.id : a.id;
+      const termine =
+        a.type === 'deleteTermin'
+          ? state.termine.filter((t) => t.id !== id)
+          : state.termine.some((t) => t.id === id)
+            ? state.termine.map((t) => (t.id === id ? a.termin : t))
+            : [...state.termine, a.termin];
+      const next = { ...state, termine };
+      // Termin sofort in die Testfassung eintragen (bei Bedarf anlegen; der geltende Plan bleibt geschützt)
+      let test = state.plans.test ?? clonePlan(state.plans.geltend, new Date().toISOString());
+      for (const p of state.persons) {
+        for (const d of DAYS) {
+          const cur = blocksOf(test, p.id, d);
+          if (!cur.length) continue;
+          const before = templateFor(p, d, state);
+          const after = templateFor(p, d, next);
+          if (sameDay(before, after)) continue;
+          let bl: Block[];
+          if (sameDay(cur, before)) bl = after.map((b) => ({ ...b, id: uid('b') }));
+          else {
+            // Tag wurde von Hand geändert: nur den Termin-Block entfernen bzw. neu einsetzen
+            bl = cur.filter((b) => !b.id.startsWith(`termin:${id}@`));
+            if (a.type === 'saveTermin' && a.termin.day === d && after.some((b) => b.id.startsWith(`termin:${id}@`))) {
+              bl = withAutoPause(insertTermin(bl, a.termin, d), state.settings, p.pauseMinuten ?? 0, uid('pause'));
+            }
+          }
+          test = withDayBlocks(test, p.id, d, bl);
+        }
+      }
+      return { ...next, plans: { ...state.plans, test } };
     }
     case 'createTest':
       if (state.plans.test) return state;
@@ -94,7 +138,7 @@ export function reducer(state: AppData, a: Action): AppData {
 /** Personen/Tage, die laut Profil arbeiten, in der Fassung aber fehlen. */
 export function missingCount(state: AppData, plan: AppData['plans']['geltend']): number {
   let n = 0;
-  for (const p of state.persons) for (const d of DAYS) if (!blocksOf(plan, p.id, d).length && templateFor(p, d).length) n++;
+  for (const p of state.persons) for (const d of DAYS) if (!blocksOf(plan, p.id, d).length && templateFor(p, d, state).length) n++;
   return n;
 }
 

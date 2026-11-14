@@ -1,6 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import type { AppData, Day, Group, Settings } from '../domain/types';
-import { DAYS } from '../domain/types';
+import type { AppData, Group, Settings } from '../domain/types';
 import { fmt, STEP, uid } from '../domain/time';
 import type { Action } from '../state/store';
 import { fmtDate } from '../lib/download';
@@ -130,13 +129,6 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
           <div>
             <label className="field-label" htmlFor={`${fid}-az`}>Hinweis ab Stunden pro Tag</label>
             <input id={`${fid}-az`} className="input num" type="number" min={1} step={0.25} value={s.hinweisArbeitszeit} onChange={(e) => set({ hinweisArbeitszeit: Math.max(0.25, num(e.target.value, 8)) })} />
-          </div>
-          <div>
-            <label className="field-label" htmlFor={`${fid}-bt`}>Tag der Dienstbesprechung</label>
-            <select id={`${fid}-bt`} className="input" value={s.besprechungsTag} onChange={(e) => set({ besprechungsTag: e.target.value as Day | '' })}>
-              <option value="">— kein Hinweis —</option>
-              {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
           </div>
         </div>
 

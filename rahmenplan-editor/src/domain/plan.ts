@@ -1,25 +1,63 @@
 // Fassungen: Plan erzeugen, vergleichen, übernehmen.
-import type { Block, Day, Person, Plan, PlanBlocks } from './types';
+import type { Block, Day, Person, Plan, PlanBlocks, Settings, Termin } from './types';
 import { DAYS } from './types';
 import { EPS } from './time';
+import { withAutoPause } from './pause';
 
-/** Normalzeiten einer Person für einen Tag (Vorlage aus dem Profil). */
-export function templateFor(person: Person, day: Day): Block[] {
+/** Was die Vorlage eines Tages außer dem Profil braucht */
+export interface TemplateCtx {
+  settings: Settings;
+  termine: Termin[];
+}
+
+/** Termine, an denen die Person an diesem Tag teilnimmt (nur wenn sie an dem Tag arbeitet) */
+export function termineFor(person: Person, day: Day, termine: Termin[]): Termin[] {
   if (!person.workdays.includes(day)) return [];
-  const src = day === 'Di' && person.tueBlocks ? person.tueBlocks : person.normBlocks;
-  return sortBlocks(src.map((b) => ({ ...b, id: `${b.id}@${day}`, unlocked: undefined })));
+  return termine.filter((t) => t.day === day && (t.teilnehmer === 'alle' || t.teilnehmer.includes(person.id)));
+}
+
+export function terminBlockId(t: Termin, day: Day): string {
+  return `termin:${t.id}@${day}`;
+}
+
+/** Fügt einen Termin als zusätzlichen Block ein; überlappende Teile anderer Blöcke werden herausgeschnitten (nicht verlängert). */
+export function insertTermin(blocks: Block[], t: Termin, day: Day): Block[] {
+  const id = terminBlockId(t, day);
+  const out: Block[] = [];
+  for (const b of blocks) {
+    if (b.id === id) continue;
+    if (b.end <= t.start + EPS || b.start >= t.end - EPS) {
+      out.push(b);
+      continue;
+    }
+    if (t.start - b.start > EPS) out.push({ ...b, id: b.id + ':v', end: t.start });
+    if (b.end - t.end > EPS) out.push({ ...b, id: b.id + ':n', start: t.end });
+  }
+  out.push({ id, start: t.start, end: t.end, type: t.type, verb: 'hart' });
+  return sortBlocks(out);
+}
+
+/**
+ * Vorlage eines Tages: Normalarbeitszeiten aus dem Profil, dazu die Termine aus dem Rahmenplan
+ * als zusätzliche Blöcke, dann – falls gesetzlich nötig – eine Pause in der Mitte des Dienstes.
+ */
+export function templateFor(person: Person, day: Day, ctx: TemplateCtx): Block[] {
+  if (!person.workdays.includes(day)) return [];
+  let blocks = sortBlocks(person.normBlocks.map((b) => ({ ...b, id: `${b.id}@${day}`, unlocked: undefined })));
+  for (const t of termineFor(person, day, ctx.termine)) blocks = insertTermin(blocks, t, day);
+  return withAutoPause(blocks, ctx.settings, person.pauseMinuten ?? 0, `pause@${person.id}`);
 }
 
 export function sortBlocks(blocks: Block[]): Block[] {
   return [...blocks].sort((a, b) => a.start - b.start || a.end - b.end);
 }
 
-export function planFromProfiles(persons: Person[], since: string): Plan {
+export function planFromProfiles(persons: Person[], since: string, ctx: TemplateCtx): Plan {
   const blocks: PlanBlocks = {};
   for (const p of persons) {
     blocks[p.id] = {};
     for (const d of DAYS) {
-      const t = templateFor(p, d);
+      const t = templateFor(p, d, ctx);
       if (t.length) blocks[p.id][d] = t;
     }
   }
@@ -58,19 +96,35 @@ function sameBlock(a: Block, b: Block): boolean {
   return Math.abs(a.start - b.start) < EPS && Math.abs(a.end - b.end) < EPS && a.type === b.type;
 }
 
+/** Gleiche Blöcke (Zeiten und Art), unabhängig von IDs und Reihenfolge */
+export function sameDay(a: Block[], b: Block[]): boolean {
+  const x = sortBlocks(a);
+  const y = sortBlocks(b);
+  return x.length === y.length && x.every((bl, i) => sameBlock(bl, y[i]));
+}
+
 export interface Deviation {
   /** Plan weicht von der Normalzeit aus dem Profil ab */
   deviates: boolean;
   /** Harte Blöcke aus dem Profil, die im Plan nicht (mehr) unverändert vorkommen */
   hardChanged: Block[];
+  /** Abweichung auch abgesehen von fehlenden Termin-Blöcken */
+  deviatesBeyondTermine: boolean;
 }
 
-export function deviation(person: Person, planned: Block[], day: Day): Deviation {
-  const tpl = templateFor(person, day);
+export function deviation(person: Person, planned: Block[], day: Day, ctx: TemplateCtx): Deviation {
+  const tpl = templateFor(person, day, ctx);
   const pl = sortBlocks(planned);
   const deviates = tpl.length !== pl.length || tpl.some((b, i) => !sameBlock(b, pl[i]));
   const hardChanged = tpl.filter((b) => b.verb === 'hart' && !pl.some((p) => sameBlock(b, p)));
-  return { deviates, hardChanged };
+  // Ohne die (fehlenden) Termine: entspricht der Plan der Vorlage ohne diese Termine?
+  const missingTermine = hardChanged.filter((b) => b.id.startsWith('termin:'));
+  let deviatesBeyondTermine = deviates;
+  if (deviates && missingTermine.length) {
+    const ohne = templateFor(person, day, { ...ctx, termine: ctx.termine.filter((t) => !missingTermine.some((b) => b.id === `termin:${t.id}@${day}`)) });
+    deviatesBeyondTermine = !sameDay(ohne, pl);
+  }
+  return { deviates, hardChanged, deviatesBeyondTermine };
 }
 
 /** Plausibilitätsprüfung der Normalzeiten im Profil. */

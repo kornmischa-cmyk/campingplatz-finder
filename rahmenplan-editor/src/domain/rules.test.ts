@@ -36,32 +36,37 @@ describe('evaluateDay (Beispieldaten)', () => {
   const { persons, plans } = data;
 
   it('geltender Plan Dienstag: Frühdienst unterbesetzt, keine Fachkraft um 7:00', () => {
-    const r = evaluateDay(persons, plans.geltend, 'Di', settings);
+    const r = evaluateDay(persons, plans.geltend, 'Di', settings, data.termine);
     const titles = r.findings.map((f) => f.title);
     expect(titles).toContain('Keine Fachkraft im Haus · 07:00–07:30');
     expect(titles).toContain('Weniger als 2 Personen · 07:00–07:30');
     expect(titles).toContain('Frauke: Plan weicht von der Normalarbeitszeit ab');
+    expect(titles).toContain('Frauke: Dienstbesprechung 14:15–15:45 fehlt im Plan');
   });
 
   it('Testfassung Dienstag: Frühdienst behoben', () => {
-    const r = evaluateDay(persons, plans.test!, 'Di', settings);
+    const r = evaluateDay(persons, plans.test!, 'Di', settings, data.termine);
     const titles = r.findings.map((f) => f.title);
     expect(titles).not.toContain('Weniger als 2 Personen · 07:00–07:30');
     expect(titles.some((t) => t.startsWith('Frauke'))).toBe(false);
-    expect(titles.some((t) => t.startsWith('Dienstbesprechung:'))).toBe(true);
+    // alle, die dienstags arbeiten, sind bei der Besprechung → kein Teilnahme-Hinweis,
+    // aber während der Besprechung betreut niemand
+    expect(titles.some((t) => t.startsWith('Dienstbesprechung:'))).toBe(false);
+    expect(titles).toContain('Keine Fachkraft im Haus · 14:15–15:45');
   });
 
   it('Hinweis bei über 8 h (Heike Mo: 8,5 h)', () => {
-    const r = evaluateDay(persons, plans.geltend, 'Mo', settings);
+    const r = evaluateDay(persons, plans.geltend, 'Mo', settings, data.termine);
     expect(r.findings.find((f) => f.title === 'Heike: 8,50 h Arbeitszeit')?.kind).toBe('h');
   });
 
   it('Abdeckung zählt nur Betreuung', () => {
-    const r = evaluateDay(persons, plans.geltend, 'Di', settings);
+    const r = evaluateDay(persons, plans.geltend, 'Di', settings, data.termine);
     const slot1430 = r.slots.find((s) => s.h === 14.5)!;
-    // Heike, Doris, Lena, Bettina, Nora sitzen in der Besprechung
-    expect(slot1430.tot).toBe(2); // Jonas, Aylin
-    expect(slot1430.fk).toBe(0);
+    const slot1330 = r.slots.find((s) => s.h === 13.5)!;
+    // 14:30: alle in der Dienstbesprechung; 13:30: Esther im Anleitergespräch, zählt nicht
+    expect(slot1430.tot).toBe(0);
+    expect(slot1330.tot).toBeGreaterThan(0);
   });
 });
 
@@ -105,7 +110,8 @@ describe('weekTable', () => {
   it('summiert Ist-Stunden', () => {
     const data = seedData();
     const carla = weekTable(data.persons, data.plans.geltend).find((r) => r.person.id === 'carla')!;
-    expect(carla.ist).toBeCloseTo(30); // Di: Anleitergespräch zählt als Arbeitszeit
+    // Di: Anleitergespräch zählt als Arbeitszeit, Dienstbesprechung 14:15–15:45 kommt als zusätzlicher Block dazu
+    expect(carla.ist).toBeCloseTo(31.25);
     expect(carla.cells[0]).toEqual({ start: 8, end: 14.5, hours: 6 });
   });
 });

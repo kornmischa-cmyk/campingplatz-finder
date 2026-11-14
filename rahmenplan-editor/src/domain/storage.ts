@@ -1,6 +1,6 @@
 // Persistenz im localStorage + Prüfung von importierten Sicherungsdateien.
-import type { AppData, Block, Day, Person, Plan } from './types';
-import { BLOCK_TYPES, DAYS } from './types';
+import type { AppData, Block, Day, Person, Plan, Termin, TerminTyp } from './types';
+import { BLOCK_TYPES, DAYS, TYPE_LABEL } from './types';
 import { defaultSettings } from './seed';
 
 export const STORAGE_KEY = 'rahmenplan-editor/v1';
@@ -77,7 +77,7 @@ function checkPerson(p: unknown, i: number): string | null {
     const okV = (v: unknown) => isObj(v) && isNum(v.min) && (v.max === null || isNum(v.max)) && Array.isArray(v.days) && v.days.every(isDay);
     if (!isObj(ds) || !okV(ds.frueh) || !okV(ds.spaet)) return `${w}: Früh-/Spätdienst-Vorgaben ungültig`;
   }
-  return checkBlocks(p.normBlocks, `${w} (${p.name}), Normalzeiten`) ?? (p.tueBlocks === null ? null : checkBlocks(p.tueBlocks, `${w} (${p.name}), Dienstag`));
+  return checkBlocks(p.normBlocks, `${w} (${p.name}), Normalzeiten`) ?? (p.tueBlocks == null ? null : checkBlocks(p.tueBlocks, `${w} (${p.name}), Dienstag`));
 }
 
 /** Liefert die Daten oder eine verständliche Fehlermeldung. */
@@ -107,17 +107,61 @@ export function parseBackup(text: string): AppData | string {
     const e2 = checkPlan(obj.plans.test, 'Testfassung');
     if (e2) return e2;
   }
+  if (obj.termine !== undefined) {
+    if (!Array.isArray(obj.termine)) return 'Termine sind beschädigt.';
+    for (const t of obj.termine) {
+      if (!isObj(t) || !isStr(t.id) || !isStr(t.name) || !isDay(t.day) || !isNum(t.start) || !isNum(t.end) || !['besprechung', 'anleitung', 'verfuegung'].includes(t.type as string))
+        return 'Ein Termin ist beschädigt.';
+      if (t.teilnehmer !== 'alle' && !(Array.isArray(t.teilnehmer) && t.teilnehmer.every(isStr))) return 'Teilnehmende eines Termins sind beschädigt.';
+    }
+  }
   const meta = isObj(obj.meta) ? obj.meta : {};
+  const migrated = migrateTueBlocks(obj.persons as Person[], (obj.termine as Termin[] | undefined) ?? []);
   return {
     version: 1,
     // fehlende (neuere) Einstellungen mit Standardwerten auffüllen
     settings: { ...defaultSettings(), ...(s as Partial<AppData['settings']>) },
     groups: obj.groups as AppData['groups'],
-    persons: obj.persons as Person[],
+    persons: migrated.persons,
+    termine: migrated.termine,
     plans: { geltend: obj.plans.geltend as Plan, test: obj.plans.test as Plan | null },
     meta: {
       lastBackup: isStr(meta.lastBackup) ? meta.lastBackup : null,
       beispieldaten: meta.beispieldaten === true,
     },
+  };
+}
+
+/**
+ * Früher gab es pro Person einen „Dienstag-Sonderfall“. Daraus werden Termine im Rahmenplan:
+ * gleiche Besprechungs-/Anleitungs-/Verfügungsblöcke mehrerer Personen werden ein gemeinsamer Termin;
+ * nehmen alle teil, die dienstags arbeiten, gilt der Termin für „alle“.
+ */
+export function migrateTueBlocks(persons: Person[], termine: Termin[]): { persons: Person[]; termine: Termin[] } {
+  if (!persons.some((p) => p.tueBlocks)) return { persons, termine };
+  const groups = new Map<string, { type: TerminTyp; start: number; end: number; ids: string[] }>();
+  for (const p of persons) {
+    for (const b of p.tueBlocks ?? []) {
+      if (b.type !== 'besprechung' && b.type !== 'anleitung' && b.type !== 'verfuegung') continue;
+      if (p.normBlocks.some((n) => n.type === b.type && n.start === b.start && n.end === b.end)) continue;
+      const key = `${b.type}|${b.start}|${b.end}`;
+      const g = groups.get(key) ?? { type: b.type, start: b.start, end: b.end, ids: [] };
+      g.ids.push(p.id);
+      groups.set(key, g);
+    }
+  }
+  const tuesdayWorkers = persons.filter((p) => p.workdays.includes('Di')).map((p) => p.id);
+  const neu: Termin[] = [...groups.values()].map((g, i) => ({
+    id: `migriert-${i + 1}`,
+    name: TYPE_LABEL[g.type],
+    type: g.type,
+    day: 'Di',
+    start: g.start,
+    end: g.end,
+    teilnehmer: tuesdayWorkers.every((id) => g.ids.includes(id)) ? 'alle' : g.ids,
+  }));
+  return {
+    persons: persons.map(({ tueBlocks: _t, ...p }) => p),
+    termine: [...termine, ...neu],
   };
 }

@@ -41,7 +41,7 @@ a { color: #b0532a; }
 a:hover { color: #8a3d1c; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-input[type='checkbox'] { accent-color: var(--primary); }
+input[type='checkbox'], input[type='radio'] { accent-color: var(--primary); }
 
 .app { max-width: 1320px; margin: 0 auto; padding: 28px 28px 80px; }
 
@@ -119,7 +119,7 @@ input[type='checkbox'] { accent-color: var(--primary); }
 .vstripe { position: relative; height: 6px; margin: 0 0 4px; }
 .vstripe > div { position: absolute; top: 0; height: 6px; background: var(--v-stripe); border-radius: 3px; }
 .person-row { display: grid; grid-template-columns: var(--label-w) 1fr; align-items: center; border-top: 1px solid var(--line); }
-.person-cell { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 0; min-width: 0; }
+.person-cell { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 0; min-width: 0; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font: 700 13px/1 var(--head); }
 .person-name-row { display: flex; align-items: center; gap: 6px; }
 .person-name { font-weight: 700; font-size: 14.5px; background: transparent; border: none; padding: 0; cursor: pointer; color: var(--ink); text-align: left; }
@@ -351,3 +351,38 @@ dialog.confirm-dialog p { font-size: 14px; margin: 0 0 8px; }
 /* Leere Gruppe im Plan */
 .person-row.empty-group { min-height: 52px; }
 .person-row.empty-group .person-cell { font-size: 13px; }
+
+/* Problem-Abzeichen an der Person */
+.p-badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.p-badge.tone-v { background: var(--v-dot); color: #fff; }
+.p-badge.tone-h { background: var(--h-dot); color: var(--ink); }
+.p-pop { position: absolute; top: calc(100% - 4px); left: 46px; z-index: 30; width: 340px; background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 12px 30px rgba(30, 20, 10, .22); font-size: 13px; }
+.p-pop ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.p-pop li { display: flex; gap: 8px; background: transparent; }
+.p-pop li.tone-v, .p-pop li.tone-h { background: transparent; color: var(--ink); }
+.p-pop .dot { margin-top: 6px; }
+.p-pop small { display: block; color: var(--text-body); font-size: 12px; }
+.finding-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+
+/* Termine im Rahmenplan */
+.termine { padding: 16px 22px; }
+.termine-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.termine-head h2 { font: 700 18px/1.2 var(--head); margin: 0; }
+.termin-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.termin-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13.5px; }
+.termin-list .spacer { flex: 1; }
+.termin-time { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.termin-form .form-grid { max-width: none; }
+.teilnehmer { border: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+.tn-list { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 8px 0 0 22px; }
+.tn-group { display: grid; gap: 4px; align-content: start; }
+
+/* Vorschau im Profil */
+.preview { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 4px; font-size: 12.5px; }
+.preview li { display: flex; gap: 8px; align-items: baseline; }
+.preview li strong { width: 22px; flex: none; }
+.preview li > span { display: flex; flex-wrap: wrap; gap: 4px; }
+.pv { padding: 1px 6px; border-radius: 6px; background: var(--line); font-variant-numeric: tabular-nums; }
+.pv-betreuung { background: #e4efda; }
+.pv-pause { background: transparent; border: 1.5px dotted var(--pause-line); }
+.pv-besprechung, .pv-anleitung { background: var(--h-bg); }

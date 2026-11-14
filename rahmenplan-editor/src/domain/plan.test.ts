@@ -6,29 +6,37 @@ import { planToCsv } from './csv';
 
 describe('Plan / Fassungen', () => {
   const data = seedData('2026-01-01T00:00:00Z');
+  const ctx = data;
   const esther = data.persons.find((p) => p.id === 'esther')!;
 
-  it('Dienstag nutzt den Sonderfall', () => {
-    expect(templateFor(esther, 'Di').map((b) => b.type)).toEqual(['betreuung', 'anleitung']);
-    expect(templateFor(esther, 'Mo').map((b) => b.type)).toEqual(['betreuung']);
+  it('Dienstag: Anleitergespräch und Dienstbesprechung kommen als Termine dazu, Pause automatisch', () => {
+    // 8–13 Betreuung; Anleitergespräch 11–13 schneidet heraus; Besprechung 14:15–15:45 als zusätzlicher Block
+    // → 6,5 h Arbeit → 30 Min Pause in der Betreuungszeit
+    expect(templateFor(esther, 'Di', ctx).map((b) => [b.type, b.start, b.end])).toEqual([
+      ['betreuung', 8, 10.5],
+      ['pause', 10.5, 11],
+      ['anleitung', 11, 13],
+      ['besprechung', 14.25, 15.75],
+    ]);
+    expect(templateFor(esther, 'Mo', ctx).map((b) => b.type)).toEqual(['betreuung']);
   });
 
   it('kein Plan an freien Tagen', () => {
     const jonas = data.persons.find((p) => p.id === 'jonas')!;
-    expect(templateFor(jonas, 'Mi')).toEqual([]);
+    expect(templateFor(jonas, 'Mi', ctx)).toEqual([]);
   });
 
   it('erkennt Abweichung und harte Zeit', () => {
-    const tpl = templateFor(esther, 'Mo');
-    expect(deviation(esther, tpl, 'Mo')).toEqual({ deviates: false, hardChanged: [] });
+    const tpl = templateFor(esther, 'Mo', ctx);
+    expect(deviation(esther, tpl, 'Mo', ctx)).toEqual({ deviates: false, hardChanged: [], deviatesBeyondTermine: false });
     const moved = [{ ...tpl[0], start: 8.25, end: 13.25 }];
-    const d = deviation(esther, moved, 'Mo');
+    const d = deviation(esther, moved, 'Mo', ctx);
     expect(d.deviates).toBe(true);
     expect(d.hardChanged).toHaveLength(1);
   });
 
   it('Übernahme entfernt Entsperrungen', () => {
-    const b = { ...templateFor(esther, 'Mo')[0], unlocked: true };
+    const b = { ...templateFor(esther, 'Mo', ctx)[0], unlocked: true };
     const test = withDayBlocks(data.plans.test!, 'esther', 'Mo', [b]);
     const adopted = adoptTest(test, 'x');
     expect(adopted.blocks.esther.Mo![0].unlocked).toBeUndefined();

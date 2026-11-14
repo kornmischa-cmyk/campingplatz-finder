@@ -51,8 +51,10 @@ export interface Person {
   soll: number;
   workdays: Day[];
   normBlocks: Block[];
-  /** Dienstag-Sonderfall; null = wie normBlocks */
-  tueBlocks: Block[] | null;
+  /** Veraltet (früher „Dienstag-Sonderfall“); wird beim Laden in Termine umgewandelt */
+  tueBlocks?: Block[] | null;
+  /** Gewünschte Pausenlänge in Minuten, wenn eine Pause nötig ist; fehlt/0 = gesetzliches Minimum */
+  pauseMinuten?: number;
   /** Person-ID der Praxisanleitung („wird angeleitet von“) */
   mentorId: string;
   notiz: string;
@@ -93,10 +95,24 @@ export interface Settings {
   maxAmStueck: number;
   /** Hinweis ab dieser Tagesarbeitszeit (h) */
   hinweisArbeitszeit: number;
-  /** Tag, an dem die Dienstbesprechung stattfindet (für den Teilnahme-Hinweis); leer = aus */
-  besprechungsTag: Day | '';
+  /** Veraltet, wird nicht mehr genutzt (Besprechungen sind jetzt Termine) */
+  besprechungsTag?: Day | '';
   /** Pausenstaffel-Tabelle im Plan zeigen */
   showPausenstaffel: boolean;
+}
+
+/** Termin im Rahmenplan, z. B. Dienstbesprechung oder Anleitergespräch */
+export type TerminTyp = 'besprechung' | 'anleitung' | 'verfuegung';
+
+export interface Termin {
+  id: string;
+  name: string;
+  type: TerminTyp;
+  day: Day;
+  start: number;
+  end: number;
+  /** 'alle' = alle, die an dem Tag arbeiten; sonst Personen-IDs */
+  teilnehmer: 'alle' | string[];
 }
 
 export interface AppData {
@@ -104,6 +120,7 @@ export interface AppData {
   settings: Settings;
   groups: Group[];
   persons: Person[];
+  termine: Termin[];
   plans: { geltend: Plan; test: Plan | null };
   meta: { lastBackup: string | null; beispieldaten: boolean };
 }
@@ -124,7 +141,7 @@ export const BLOCK_TYPES: BlockType[] = ['betreuung', 'verfuegung', 'pause', 'be
 export const NUDGEABLE: Record<BlockType, boolean> = {
   betreuung: true,
   verfuegung: true,
-  pause: false,
+  pause: true,
   besprechung: false,
   anleitung: false,
 };

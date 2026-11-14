@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { AppData, Block, Day, DienstArt, DienstVorgabe, Person, Settings } from '../domain/types';
 import { BLOCK_TYPES, DAYS, TYPE_LABEL } from '../domain/types';
-import { blockListIssues, sortBlocks } from '../domain/plan';
-import { fmt, STEP, uid } from '../domain/time';
+import { blockListIssues, sortBlocks, templateFor } from '../domain/plan';
+import { fmt, fmtShort, STEP, uid } from '../domain/time';
 import type { Action } from '../state/store';
 import type { ConfirmRequest } from './ConfirmDialog';
 import { DIENST_LABEL, randzeitenOf, vorgabenOf, vorgabeIssues } from '../domain/dienste';
@@ -135,7 +135,7 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
 
   const { open, close } = data.settings;
   const nameMissing = !person.name.trim();
-  const blockErrors = [...blockListIssues(person.normBlocks, open, close), ...(person.tueBlocks ? blockListIssues(person.tueBlocks, open, close) : [])];
+  const blockErrors = blockListIssues(person.normBlocks, open, close);
   const dienste = vorgabenOf(person);
   const dienstErrors = (['frueh', 'spaet'] as DienstArt[]).flatMap((a) => vorgabeIssues(dienste[a], a));
   const invalid = nameMissing || blockErrors.length > 0 || dienstErrors.length > 0;
@@ -295,29 +295,56 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
         </div>
 
         <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <div className="field-label">Normalarbeitszeiten{person.tueBlocks ? ' (Mo/Mi/Do/Fr)' : ''}</div>
+          <div className="field-label">Normalarbeitszeiten</div>
           <button className="linkbtn" onClick={() => upd({ normBlocks: [...person.normBlocks, newBlock()] })}>+ Block</button>
         </div>
         <div style={{ marginBottom: 16 }}>
           <BlockEditor label="Normalarbeitszeiten" blocks={person.normBlocks} onChange={(b) => upd({ normBlocks: sortBlocks(b) })} open={open} close={close} />
         </div>
 
-        <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <div className="field-label">Dienstag (Sonderfall)</div>
-          {person.tueBlocks ? (
-            <button className="linkbtn danger" onClick={() => upd({ tueBlocks: null })}>Sonderregel entfernen</button>
-          ) : (
-            <button className="linkbtn" onClick={() => upd({ tueBlocks: person.normBlocks.map((b) => ({ ...b, id: uid('t') })) })}>+ Sonderregel</button>
-          )}
-        </div>
-        {person.tueBlocks && (
-          <div style={{ marginBottom: 8 }}>
-            <button className="linkbtn" style={{ marginBottom: 4, display: 'block' }} onClick={() => upd({ tueBlocks: [...(person.tueBlocks ?? []), { ...newBlock(), id: uid('t') }] })}>
-              + Block
-            </button>
-            <BlockEditor label="Dienstag" blocks={person.tueBlocks} onChange={(b) => upd({ tueBlocks: sortBlocks(b) })} open={open} close={close} />
+        <div className="field">
+          <label className="field-label" htmlFor={`${fid}-pause`}>Pause, wenn nötig</label>
+          <select
+            id={`${fid}-pause`}
+            className="input"
+            value={person.pauseMinuten ?? 0}
+            onChange={(e) => upd({ pauseMinuten: Number(e.target.value) || undefined })}
+          >
+            <option value={0}>gesetzliches Minimum (30 bzw. 45 Min)</option>
+            {[45, 60, 75, 90].map((m) => <option key={m} value={m}>{m} Minuten</option>)}
+          </select>
+          <div className="hint" style={{ marginTop: 4 }}>
+            Ist der Dienst so lang, dass eine Pause Pflicht ist, und fehlt sie in den Normalarbeitszeiten, plant die App sie automatisch in die
+            Mitte ein. In der Testfassung lässt sie sich verschieben.
           </div>
-        )}
+        </div>
+
+        <div className="field">
+          <div className="field-label">So wird geplant</div>
+          <ul className="preview">
+            {DAYS.map((d) => {
+              const bl = templateFor(person, d, data);
+              return (
+                <li key={d}>
+                  <strong>{d}</strong>
+                  {bl.length ? (
+                    <span>
+                      {bl.map((b) => (
+                        <span key={b.id} className={`pv pv-${b.type}`}>
+                          {b.type === 'betreuung' ? '' : TYPE_LABEL[b.type] + ' '}
+                          {fmtShort(b.start)}–{fmtShort(b.end)}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="hint">frei</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hint">Mit Terminen aus dem Rahmenplan und automatischer Pause.</div>
+        </div>
 
         <div className="drawer-section">
           <div className="field-label">Früh- und Spätdienst</div>
