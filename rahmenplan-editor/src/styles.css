@@ -335,3 +335,19 @@ dialog.confirm-dialog p { font-size: 14px; margin: 0 0 8px; }
 .onboarding h2 { font: 700 20px/1.2 var(--head); margin: 0 0 8px; }
 .onboarding ol { margin: 0; padding-left: 20px; }
 .onboarding li { margin-bottom: 8px; }
+
+/* Früh-/Spätdienst im Profil */
+.dienst { border: 1px solid var(--line-2); border-radius: 12px; padding: 8px 12px 10px; margin: 0 0 10px; background: #fff; }
+.dienst legend { font-weight: 700; font-size: 13.5px; padding: 0 4px; }
+.dienst:disabled { opacity: .6; }
+.dienst-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
+
+/* Neue Gruppe (Personal) */
+.add-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border: 1.5px dashed var(--line-2); border-radius: 14px; }
+.add-group h3 { margin: 0 8px 0 0; font: 700 16px/1.2 var(--head); }
+.add-group .input { width: auto; flex: 1 1 200px; }
+.add-group .input.num { flex: 0 0 90px; }
+
+/* Leere Gruppe im Plan */
+.person-row.empty-group { min-height: 52px; }
+.person-row.empty-group .person-cell { font-size: 13px; }

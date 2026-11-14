@@ -111,4 +111,29 @@ describe('App (Smoke)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
     expect(screen.getByText('Noch niemand in dieser Gruppe.')).toBeTruthy();
   });
+
+  it('Gruppe unter „Personal“ hinzufügen; leere Gruppe erscheint im Plan', () => {
+    renderApp(emptyData());
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.change(screen.getByLabelText('Name der neuen Gruppe'), { target: { value: 'Füchse' } });
+    fireEvent.change(screen.getByLabelText('Anzahl Kinder'), { target: { value: '18' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe hinzufügen' }));
+    expect(screen.getByRole('heading', { name: 'Füchse' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: '+ Person' })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
+    expect(screen.getByRole('heading', { name: 'Füchse' })).toBeTruthy();
+  });
+
+  it('Frühdienst-Vorgabe im Profil wird geprüft', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Tina/ }));
+    const dlg = screen.getByRole('dialog');
+    // Tina beginnt Mo–Fr um 7:00 → 5× Frühdienst; höchstens 2× erlaubt
+    fireEvent.change(within(dlg).getAllByLabelText('höchstens')[0], { target: { value: '2' } });
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Speichern' }));
+    expect(screen.getByText(/^Frühdienst höchstens 2×/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
+    expect(screen.getByText('Tina: 5× Frühdienst (höchstens 2×)')).toBeTruthy();
+  });
 });

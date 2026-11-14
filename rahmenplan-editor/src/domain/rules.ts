@@ -3,6 +3,7 @@
 import type { Block, Day, Person, Plan, Settings } from './types';
 import { STEP, EPS, fmt, fmtDecimal, minutes } from './time';
 import { blocksOf, deviation } from './plan';
+import { dienstTagFindings } from './dienste';
 
 export interface Slot {
   h: number;
@@ -183,6 +184,8 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
       }
       if (bl.some((b) => b.type === 'besprechung')) teilnehmende++;
     }
+
+    L.push(...dienstTagFindings(p, bl, day, settings));
 
     for (const hb of dev.hardChanged) {
       L.push({

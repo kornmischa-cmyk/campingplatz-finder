@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { AppData, Block, Person } from '../domain/types';
+import type { AppData, Block, Day, DienstArt, DienstVorgabe, Person, Settings } from '../domain/types';
 import { BLOCK_TYPES, DAYS, TYPE_LABEL } from '../domain/types';
 import { blockListIssues, sortBlocks } from '../domain/plan';
 import { fmt, STEP, uid } from '../domain/time';
 import type { Action } from '../state/store';
 import type { ConfirmRequest } from './ConfirmDialog';
+import { DIENST_LABEL, randzeitenOf, vorgabenOf, vorgabeIssues } from '../domain/dienste';
 
 interface Props {
   data: AppData;
@@ -73,6 +74,55 @@ function BlockEditor({
   );
 }
 
+function DienstEditor({ art, v, onChange, settings }: { art: DienstArt; v: DienstVorgabe; onChange: (v: DienstVorgabe) => void; settings: Settings }) {
+  const id = useId();
+  const rz = randzeitenOf(settings, art);
+  const verboten = v.max === 0;
+  const zeit = rz.map((r) => `${fmt(r.start)}–${fmt(r.end)}`).join(', ');
+  return (
+    <fieldset className="dienst" disabled={!rz.length}>
+      <legend>
+        {DIENST_LABEL[art]} <span className="hint">{rz.length ? `(${zeit})` : '(keine Randzeit eingestellt)'}</span>
+      </legend>
+      <div className="dienst-row">
+        <label htmlFor={`${id}-min`}>mindestens</label>
+        <select id={`${id}-min`} className="input sm" value={v.min} disabled={verboten} onChange={(e) => onChange({ ...v, min: Number(e.target.value) })}>
+          {[0, 1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 0 ? '–' : `${n}×`}</option>)}
+        </select>
+        <label htmlFor={`${id}-max`}>höchstens</label>
+        <select
+          id={`${id}-max`}
+          className="input sm"
+          value={v.max === null ? '' : v.max}
+          onChange={(e) => {
+            const max = e.target.value === '' ? null : Number(e.target.value);
+            onChange({ ...v, max, min: max === 0 ? 0 : v.min });
+          }}
+        >
+          <option value="">beliebig oft</option>
+          <option value={0}>nie (darf nicht)</option>
+          {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}×</option>)}
+        </select>
+        <span className="hint">pro Woche</span>
+      </div>
+      <div className="dienst-row" role="group" aria-label={`${DIENST_LABEL[art]} möglich an`}>
+        <span className="hint">möglich an</span>
+        {DAYS.map((d: Day) => (
+          <label key={d} className="check">
+            <input
+              type="checkbox"
+              disabled={verboten}
+              checked={!verboten && v.days.includes(d)}
+              onChange={() => onChange({ ...v, days: v.days.includes(d) ? v.days.filter((x) => x !== d) : DAYS.filter((x) => x === d || v.days.includes(x)) })}
+            />
+            {d}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 const same = (a: Person, b: Person) => JSON.stringify(a) === JSON.stringify(b);
 
 export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose, confirm }: Props) {
@@ -86,7 +136,10 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
   const { open, close } = data.settings;
   const nameMissing = !person.name.trim();
   const blockErrors = [...blockListIssues(person.normBlocks, open, close), ...(person.tueBlocks ? blockListIssues(person.tueBlocks, open, close) : [])];
-  const invalid = nameMissing || blockErrors.length > 0;
+  const dienste = vorgabenOf(person);
+  const dienstErrors = (['frueh', 'spaet'] as DienstArt[]).flatMap((a) => vorgabeIssues(dienste[a], a));
+  const invalid = nameMissing || blockErrors.length > 0 || dienstErrors.length > 0;
+  const setDienst = (art: DienstArt, v: DienstVorgabe) => upd({ dienste: { ...dienste, [art]: v } });
 
   const requestClose = () => {
     if (!dirty) {
@@ -267,6 +320,21 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
         )}
 
         <div className="drawer-section">
+          <div className="field-label">Früh- und Spätdienst</div>
+          <p className="hint" style={{ margin: '0 0 8px' }}>
+            Zählt, wenn die Person in der Randzeit in der Betreuung ist. Mehr als erlaubt oder an einem nicht vorgesehenen Tag ist ein Verstoß, zu
+            wenig ein Hinweis.
+          </p>
+          <DienstEditor art="frueh" v={dienste.frueh} onChange={(v) => setDienst('frueh', v)} settings={data.settings} />
+          <DienstEditor art="spaet" v={dienste.spaet} onChange={(v) => setDienst('spaet', v)} settings={data.settings} />
+          {dienstErrors.length > 0 && (
+            <div className="issues" role="alert">
+              {dienstErrors.map((t) => <p key={t}>{t}</p>)}
+            </div>
+          )}
+        </div>
+
+        <div className="drawer-section">
           <div className="field-label">Praxisanleitung</div>
           <label className="hint" htmlFor={`${fid}-mentor`} style={{ display: 'block', marginBottom: 4 }}>Wird angeleitet von</label>
           <select id={`${fid}-mentor`} className="input" style={{ marginBottom: 10 }} value={person.mentorId} onChange={(e) => upd({ mentorId: e.target.value })}>
@@ -309,7 +377,7 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
         <div className="drawer-foot">
           {showErrors && invalid ? (
             <span className="foot-msg error" role="alert">
-              {nameMissing ? 'Name fehlt.' : 'Bitte die markierten Zeiten korrigieren.'}
+              {nameMissing ? 'Name fehlt.' : blockErrors.length ? 'Bitte die markierten Zeiten korrigieren.' : 'Früh-/Spätdienst-Vorgaben widersprechen sich.'}
             </span>
           ) : (
             <span className="foot-msg" aria-live="polite">{dirty ? (isNew ? 'Noch nicht angelegt' : 'Ungespeicherte Änderungen') : 'Alles gespeichert'}</span>

@@ -238,7 +238,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               goTo={setView}
             />
           )}
-          {view === 'personal' && <PersonalView data={data} onOpenProfile={openProfile} onNewPerson={newPerson} />}
+          {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} onNewPerson={newPerson} />}
           {view === 'settings' && (
             <SettingsView
               data={data}

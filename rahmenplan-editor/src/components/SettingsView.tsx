@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { AppData, Day, Group, Settings } from '../domain/types';
 import { DAYS } from '../domain/types';
 import { fmt, STEP, uid } from '../domain/time';
@@ -40,6 +40,14 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
   const set = (patch: Partial<Settings>) => dispatch({ type: 'setSettings', patch });
   const setGroups = (groups: Group[]) => dispatch({ type: 'setGroups', groups });
   const fid = useId();
+  const [focusGroup, setFocusGroup] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusGroup) return;
+    const el = document.querySelector<HTMLInputElement>(`input[data-group="${focusGroup}"]`);
+    el?.focus();
+    el?.select();
+    setFocusGroup(null);
+  }, [focusGroup]);
 
   return (
     <div className="settings">
@@ -73,7 +81,7 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
           };
           return (
             <div className="list-row" key={g.id}>
-              <input className="input" aria-label={`Gruppe ${i + 1}, Name`} value={g.name} onChange={(e) => upd({ name: e.target.value })} />
+              <input className="input" data-group={g.id} aria-label={`Gruppe ${i + 1}, Name`} value={g.name} onChange={(e) => upd({ name: e.target.value })} />
               <input className="input num" type="number" min={0} aria-label={`Gruppe ${i + 1}, Anzahl Kinder`} value={g.kinder} onChange={(e) => upd({ kinder: Math.max(0, Math.round(num(e.target.value))) })} />
               <span className="hint">Kinder</span>
               <input className="input" style={{ width: 90 }} aria-label={`Gruppe ${i + 1}, Alter`} placeholder="z. B. 3–6 J." value={g.alter} onChange={(e) => upd({ alter: e.target.value })} />
@@ -91,8 +99,16 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
             </div>
           );
         })}
-        <button className="linkbtn" onClick={() => setGroups([...data.groups, { id: uid('g'), name: 'Neue Gruppe', kinder: 0, alter: '' }])}>
-          + Gruppe
+        <button
+          className="pill"
+          style={{ marginTop: 6 }}
+          onClick={() => {
+            const id = uid('g');
+            setGroups([...data.groups, { id, name: `Gruppe ${data.groups.length + 1}`, kinder: 0, alter: '' }]);
+            setFocusGroup(id);
+          }}
+        >
+          + Gruppe hinzufügen
         </button>
       </div>
 

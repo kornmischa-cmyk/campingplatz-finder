@@ -19,6 +19,15 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Früh- und Spätdienst pro Person (14.11.2026)
+
+- Frühdienst/Spätdienst = die Person ist in einer Früh- bzw. Spät-Randzeit (Einstellungen → Randzeiten) in der Betreuung.
+  Randzeiten in der ersten Tageshälfte gelten als Früh-, in der zweiten als Spätdienst.
+- Pro Person einstellbar: mindestens – höchstens pro Woche („nie“ = darf nicht) und an welchen Wochentagen möglich.
+  Die Wochentage sind als „möglich an“ umgesetzt, nicht als „Pflicht an“; Pflicht ergibt sich aus „mindestens“.
+- Prüfung: mehr als erlaubt oder an einem nicht vorgesehenen Tag = Verstoß, weniger als mindestens = Hinweis.
+- Profiländerungen gelten erst nach „Speichern“ (Entwurf im Profil).
+
 ## Design-Update „Warm & freundlich“ (23.09.2026)
 
 Der Handoff wurde durch die finale visuelle Richtung ersetzt (`design-handoff/`). Logik und Interaktion sind unverändert,

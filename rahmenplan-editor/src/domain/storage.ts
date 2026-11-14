@@ -72,6 +72,11 @@ function checkPerson(p: unknown, i: number): string | null {
     return `${w}: Textfelder fehlen`;
   if (typeof p.fk !== 'boolean' || !isNum(p.soll)) return `${w}: Fachkraft oder Soll-Stunden fehlen`;
   if (!Array.isArray(p.workdays) || !p.workdays.every(isDay)) return `${w}: Arbeitstage ungültig`;
+  if (p.dienste !== undefined) {
+    const ds = p.dienste;
+    const okV = (v: unknown) => isObj(v) && isNum(v.min) && (v.max === null || isNum(v.max)) && Array.isArray(v.days) && v.days.every(isDay);
+    if (!isObj(ds) || !okV(ds.frueh) || !okV(ds.spaet)) return `${w}: Früh-/Spätdienst-Vorgaben ungültig`;
+  }
   return checkBlocks(p.normBlocks, `${w} (${p.name}), Normalzeiten`) ?? (p.tueBlocks === null ? null : checkBlocks(p.tueBlocks, `${w} (${p.name}), Dienstag`));
 }
 

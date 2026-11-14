@@ -5,6 +5,7 @@ import { weekTable } from '../domain/rules';
 import { groupColor, groupedPersons } from '../domain/groups';
 import { fmt, fmtDecimal, fmtShort } from '../domain/time';
 import { fmtDate } from '../lib/download';
+import { dienstTage } from '../domain/dienste';
 
 /** Druckansicht des GELTENDEN Plans (nur im Druck sichtbar). */
 export function PrintView({ data }: { data: AppData }) {
@@ -80,6 +81,8 @@ export function PrintView({ data }: { data: AppData }) {
             <tr>
               <th>Person</th>
               {DAYS.map((d) => <th key={d}>{d}</th>)}
+              <th>Früh</th>
+              <th>Spät</th>
               <th>Ist</th>
               <th>Soll</th>
             </tr>
@@ -89,6 +92,8 @@ export function PrintView({ data }: { data: AppData }) {
               <tr key={r.person.id}>
                 <td><strong>{r.person.name}</strong></td>
                 {r.cells.map((c, i) => (c ? <td key={i}>{fmt(c.start)}–{fmt(c.end)}</td> : <td key={i} className="off">—</td>))}
+                <td>{dienstTage(r.person, plan, data.settings, 'frueh').length}</td>
+                <td>{dienstTage(r.person, plan, data.settings, 'spaet').length}</td>
                 <td className="strong">{fmtDecimal(r.ist, 1)}</td>
                 <td>{r.person.soll}</td>
               </tr>

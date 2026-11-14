@@ -25,6 +25,18 @@ export interface Group {
   alter: string;
 }
 
+/** Früh- bzw. Spätdienst-Vorgaben einer Person */
+export interface DienstVorgabe {
+  /** mindestens … pro Woche (0 = keine Vorgabe) */
+  min: number;
+  /** höchstens … pro Woche; null = unbegrenzt, 0 = darf nicht */
+  max: number | null;
+  /** an diesen Tagen möglich */
+  days: Day[];
+}
+
+export type DienstArt = 'frueh' | 'spaet';
+
 /**
  * Personalprofil = Stammdaten + Normalarbeitszeiten.
  * Die Normalzeiten sind die Vorlage für den Plan, wirken aber NICHT direkt auf ihn
@@ -44,6 +56,8 @@ export interface Person {
   /** Person-ID der Praxisanleitung („wird angeleitet von“) */
   mentorId: string;
   notiz: string;
+  /** Früh-/Spätdienst-Vorgaben; fehlt = keine Vorgaben */
+  dienste?: Record<DienstArt, DienstVorgabe>;
 }
 
 /** Blöcke je Person und Tag. Fehlender Eintrag = an dem Tag nicht eingeplant. */

@@ -6,6 +6,7 @@ import { blocksOf, templateFor } from '../domain/plan';
 import { applyDrag, canDrag, isLocked, planDrag, type DragMode } from '../domain/drag';
 import { fmt, fmtDecimal, fmtShort, STEP } from '../domain/time';
 import { missingCount, type Action } from '../state/store';
+import { dienstTage, dienstWochenFindings } from '../domain/dienste';
 import { fmtDate } from '../lib/download';
 import { Timeline, type Selection } from './Timeline';
 import type { ConfirmRequest } from './ConfirmDialog';
@@ -62,12 +63,13 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
   const weekCounts = (v: 'test' | 'geltend') => {
     const pl = v === 'test' ? data.plans.test : data.plans.geltend;
     if (!pl) return { v: 0, h: 0 };
+    const wf = dienstWochenFindings(persons, pl, settings);
     return DAYS.reduce(
       (acc, d) => {
         const c = evaluateDay(persons, pl, d, settings).counts;
         return { v: acc.v + c.v, h: acc.h + c.h };
       },
-      { v: 0, h: 0 },
+      { v: wf.filter((f) => f.kind === 'v').length, h: wf.filter((f) => f.kind === 'h').length },
     );
   };
 
@@ -113,6 +115,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
 
   const variantLabel = effVariant === 'test' ? 'Testfassung' : 'Geltender Plan';
   const week = weekTable(persons, plan);
+  const wochenFindings = useMemo(() => dienstWochenFindings(persons, plan, settings), [persons, plan, settings]);
   const span = settings.close - settings.open;
   const pct = (h: number) => ((h - settings.open) / span) * 100;
   const randText = settings.randzeiten.map((r) => `${fmtShort(r.start)}–${fmtShort(r.end)} mind. ${r.minPersonen}`).join(', ');
@@ -394,6 +397,26 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
         ))}
       </div>
 
+      {wochenFindings.length > 0 && (
+        <>
+          <h2 className="h2">In der Woche: Früh- und Spätdienste</h2>
+          <div className="findings">
+            {wochenFindings.map((f, i) => (
+              <div className={`finding tone-${f.kind}`} key={i}>
+                <span className="dot" />
+                <div>
+                  <div className="finding-title">
+                    <span className="visually-hidden">{f.kind === 'v' ? 'Verstoß: ' : 'Hinweis: '}</span>
+                    {f.title}
+                  </div>
+                  <div className="finding-desc">{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       <details className="fold">
         <summary>Wochenübersicht · {variantLabel}</summary>
         <div className="fold-body scroll-x" style={{ paddingTop: 0, marginTop: 12 }}>
@@ -402,6 +425,8 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               <tr>
                 <th>Person</th>
                 {DAYS.map((d) => <th key={d}>{d}</th>)}
+                <th title="Frühdienste pro Woche">Früh</th>
+                <th title="Spätdienste pro Woche">Spät</th>
                 <th>Ist</th>
                 <th>Soll</th>
               </tr>
@@ -413,6 +438,8 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                   {r.cells.map((cell, i) =>
                     cell ? <td key={i}>{fmt(cell.start)}–{fmt(cell.end)}</td> : <td key={i} className="off">—</td>,
                   )}
+                  <td>{dienstTage(r.person, plan, settings, 'frueh').length}</td>
+                  <td>{dienstTage(r.person, plan, settings, 'spaet').length}</td>
                   <td className="strong">
                     {fmtDecimal(r.ist, 1)}
                     {Math.abs(r.ist - r.person.soll) > 0.01 && (

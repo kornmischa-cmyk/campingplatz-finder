@@ -151,7 +151,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
       </div>
 
       {groupedPersons(data).map(({ group: g, members }) => {
-        if (!members.length) return null;
+        if (!members.length && g.id === '__ohne') return null;
         const gc = groupColor(data.groups, g.id);
         return (
           <section key={g.id} aria-label={`Gruppe ${g.name}`}>
@@ -170,6 +170,12 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                 ))}
               </div>
             </div>
+            {members.length === 0 && (
+              <div className="person-row empty-group">
+                <div className="person-cell hint">Noch niemand in dieser Gruppe</div>
+                <div className="hint">Personen legst du unter „Personal“ an.</div>
+              </div>
+            )}
             {members.map((p) => {
               const blocks = blocksOf(plan, p.id, day);
               const az = workHours(blocks);

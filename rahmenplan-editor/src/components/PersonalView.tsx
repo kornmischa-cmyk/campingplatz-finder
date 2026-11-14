@@ -1,15 +1,28 @@
 import type { AppData, Person } from '../domain/types';
 import { groupColor, groupedPersons, initials } from '../domain/groups';
+import { useState } from 'react';
+import type { Action } from '../state/store';
+import { DIENST_LABEL, hatVorgabe, vorgabenOf, vorgabeText } from '../domain/dienste';
 import { uid } from '../domain/time';
 
 interface Props {
   data: AppData;
+  dispatch: (a: Action) => void;
   onOpenProfile: (personId: string, opener: HTMLElement) => void;
   /** Neue Person im Profil öffnen – angelegt wird sie erst beim Speichern */
   onNewPerson: (person: Person, opener: HTMLElement) => void;
 }
 
-export function PersonalView({ data, onOpenProfile, onNewPerson }: Props) {
+export function PersonalView({ data, dispatch, onOpenProfile, onNewPerson }: Props) {
+  const [gName, setGName] = useState('');
+  const [gKinder, setGKinder] = useState('');
+  const addGroup = () => {
+    const name = gName.trim();
+    if (!name) return;
+    dispatch({ type: 'setGroups', groups: [...data.groups, { id: uid('g'), name, kinder: Math.max(0, parseInt(gKinder, 10) || 0), alter: '' }] });
+    setGName('');
+    setGKinder('');
+  };
   const add = (groupId: string, opener: HTMLElement) => {
     const id = uid('p');
     const person: Person = {
@@ -59,6 +72,14 @@ export function PersonalView({ data, onOpenProfile, onNewPerson }: Props) {
                     <small>
                       {p.qual || 'ohne Qualifikationsangabe'} · Soll {p.soll} h/Wo · {p.workdays.join(', ') || 'keine Arbeitstage'}
                     </small>
+                    {(['frueh', 'spaet'] as const).some((a) => hatVorgabe(vorgabenOf(p)[a])) && (
+                      <small>
+                        {(['frueh', 'spaet'] as const)
+                          .filter((a) => hatVorgabe(vorgabenOf(p)[a]))
+                          .map((a) => `${DIENST_LABEL[a]} ${vorgabeText(vorgabenOf(p)[a])}`)
+                          .join(' · ')}
+                      </small>
+                    )}
                   </span>
                 </span>
                 <span className={`fk-badge ${p.fk ? 'yes' : 'no'}`}>{p.fk ? 'Fachkraft' : 'Nicht-Fachkraft'}</span>
@@ -67,6 +88,20 @@ export function PersonalView({ data, onOpenProfile, onNewPerson }: Props) {
           </div>
         );
       })}
+      <form
+        className="add-group"
+        onSubmit={(e) => {
+          e.preventDefault();
+          addGroup();
+        }}
+      >
+        <h3>Neue Gruppe</h3>
+        <input className="input" aria-label="Name der neuen Gruppe" placeholder="Name, z. B. Bären" value={gName} onChange={(e) => setGName(e.target.value)} />
+        <input className="input num" style={{ flex: "0 0 90px", width: 90 }} aria-label="Anzahl Kinder" placeholder="Kinder" inputMode="numeric" value={gKinder} onChange={(e) => setGKinder(e.target.value.replace(/\D/g, ''))} />
+        <button type="submit" className="pill" disabled={!gName.trim()}>
+          Gruppe hinzufügen
+        </button>
+      </form>
     </div>
   );
 }
