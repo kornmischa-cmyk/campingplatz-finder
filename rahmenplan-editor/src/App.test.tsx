@@ -12,6 +12,14 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   } as unknown as typeof ResizeObserver;
+  // jsdom kennt <dialog>.showModal/close nicht
+  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+    this.removeAttribute('open');
+    this.dispatchEvent(new Event('close'));
+  };
 });
 afterEach(() => {
   cleanup();
@@ -59,10 +67,48 @@ describe('App (Smoke)', () => {
     const name = within(screen.getByRole('dialog')).getByLabelText('Name') as HTMLInputElement;
     expect(document.activeElement).toBe(name);
     fireEvent.change(name, { target: { value: 'Anna' } });
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Person anlegen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
     fireEvent.click(screen.getByRole('button', { name: 'Testfassung anlegen und einplanen' }));
     expect(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ })).toBeTruthy();
     expect(screen.queryByText(/noch nicht eingeplant/)).toBeNull();
+  });
+
+  it('Profil: Änderungen gelten erst nach „Speichern“', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Carla/ }));
+    const dlg = screen.getByRole('dialog');
+    fireEvent.change(within(dlg).getByLabelText('Qualifikation'), { target: { value: 'Kita-Leitung' } });
+    // Liste zeigt noch den alten Stand
+    expect(screen.getByRole('button', { name: /^Carla\s*Erzieherin ·/ })).toBeTruthy();
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Speichern' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: /^Carla\s*Kita-Leitung ·/ })).toBeTruthy();
+  });
+
+  it('Profil: Abbrechen mit Änderungen fragt nach und verwirft', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Tina/ }));
+    const dlg = screen.getByRole('dialog');
+    fireEvent.change(within(dlg).getByLabelText('Qualifikation'), { target: { value: 'XYZ' } });
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('heading', { name: 'Änderungen verwerfen?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+    expect(screen.queryByRole('dialog', { name: /Tina/ })).toBeNull();
+    expect(screen.queryByText(/XYZ/)).toBeNull();
+  });
+
+  it('Neue Person ohne Namen lässt sich nicht anlegen; Abbrechen legt nichts an', () => {
+    renderApp(emptyData());
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Person' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Person anlegen' }));
+    expect(screen.getByText('Bitte einen Namen eingeben.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+    expect(screen.getByText('Noch niemand in dieser Gruppe.')).toBeTruthy();
   });
 });

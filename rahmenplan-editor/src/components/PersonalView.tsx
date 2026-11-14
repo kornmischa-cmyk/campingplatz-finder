@@ -1,20 +1,20 @@
 import type { AppData, Person } from '../domain/types';
 import { groupColor, groupedPersons, initials } from '../domain/groups';
 import { uid } from '../domain/time';
-import type { Action } from '../state/store';
 
 interface Props {
   data: AppData;
-  dispatch: (a: Action) => void;
   onOpenProfile: (personId: string, opener: HTMLElement) => void;
+  /** Neue Person im Profil öffnen – angelegt wird sie erst beim Speichern */
+  onNewPerson: (person: Person, opener: HTMLElement) => void;
 }
 
-export function PersonalView({ data, dispatch, onOpenProfile }: Props) {
+export function PersonalView({ data, onOpenProfile, onNewPerson }: Props) {
   const add = (groupId: string, opener: HTMLElement) => {
     const id = uid('p');
     const person: Person = {
       id,
-      name: 'Neue Person',
+      name: '',
       qual: '',
       fk: false,
       groupId,
@@ -25,8 +25,7 @@ export function PersonalView({ data, dispatch, onOpenProfile }: Props) {
       mentorId: '',
       notiz: '',
     };
-    dispatch({ type: 'addPerson', person });
-    onOpenProfile(id, opener);
+    onNewPerson(person, opener);
   };
 
   return (

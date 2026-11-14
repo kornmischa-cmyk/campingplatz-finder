@@ -5,7 +5,7 @@ import { emptyData, seedData } from './domain/seed';
 import { parseBackup, toBackup } from './domain/storage';
 import { fmtShort } from './domain/time';
 import { useStore, type SaveStatus } from './state/store';
-import type { AppData } from './domain/types';
+import type { AppData, Person } from './domain/types';
 import type { Backend } from './lib/fileStore';
 import { dateStamp, daysSince, downloadText, fmtDate } from './lib/download';
 import { PlanView } from './components/PlanView';
@@ -47,7 +47,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
   const [view, setView] = useState<View>('plan');
   const [variant, setVariant] = useState<Variant>(data.plans.test ? 'test' : 'geltend');
   const [day, setDay] = useState<Day>('Di');
-  const [profile, setProfile] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ initial: Person; isNew: boolean } | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
   const [toast, setToast] = useState<string | null>(startInfo ?? null);
@@ -65,10 +65,25 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
     }
   }, [notice, clearNotice]);
 
-  const openProfile = useCallback((id: string, el: HTMLElement) => {
+  const openProfile = useCallback(
+    (id: string, el: HTMLElement) => {
+      const p = data.persons.find((x) => x.id === id);
+      if (!p) return;
+      opener.current = el;
+      setProfile({ initial: p, isNew: false });
+    },
+    [data.persons],
+  );
+  const newPerson = useCallback((p: Person, el: HTMLElement) => {
     opener.current = el;
-    setProfile(id);
+    setProfile({ initial: p, isNew: true });
   }, []);
+  const saveProfile = (p: Person) => {
+    if (data.persons.some((x) => x.id === p.id)) dispatch({ type: 'updatePerson', id: p.id, patch: p });
+    else dispatch({ type: 'addPerson', person: p });
+    setToast(profile?.isNew ? `„${p.name}“ angelegt.` : `„${p.name}“ gespeichert.`);
+    closeProfile();
+  };
   const closeProfile = useCallback(() => {
     setProfile(null);
     // Fokus an den Auslöser zurückgeben (falls er noch existiert)
@@ -223,7 +238,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               goTo={setView}
             />
           )}
-          {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} />}
+          {view === 'personal' && <PersonalView data={data} onOpenProfile={openProfile} onNewPerson={newPerson} />}
           {view === 'settings' && (
             <SettingsView
               data={data}
@@ -242,7 +257,18 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
 
       <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => onFile(e.target.files?.[0])} />
 
-      {profile && <ProfileDrawer data={data} personId={profile} dispatch={dispatch} onClose={closeProfile} confirm={setConfirmReq} />}
+      {profile && (
+        <ProfileDrawer
+          key={profile.initial.id}
+          data={data}
+          initial={profile.initial}
+          isNew={profile.isNew}
+          dispatch={dispatch}
+          onSave={saveProfile}
+          onClose={closeProfile}
+          confirm={setConfirmReq}
+        />
+      )}
       <ConfirmDialog req={confirmReq} onClose={() => setConfirmReq(null)} />
       {toast && <div className="toast" role="status">{toast}</div>}
       <PrintView data={data} />

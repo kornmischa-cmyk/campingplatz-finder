@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { AppData, Block, Person } from '../domain/types';
 import { BLOCK_TYPES, DAYS, TYPE_LABEL } from '../domain/types';
 import { blockListIssues, sortBlocks } from '../domain/plan';
@@ -8,8 +8,11 @@ import type { ConfirmRequest } from './ConfirmDialog';
 
 interface Props {
   data: AppData;
-  personId: string;
+  /** Stand beim Öffnen (bei neuer Person: Vorlage, noch nicht in den Daten) */
+  initial: Person;
+  isNew: boolean;
   dispatch: (a: Action) => void;
+  onSave: (p: Person) => void;
   onClose: () => void;
   confirm: (r: ConfirmRequest) => void;
 }
@@ -70,27 +73,55 @@ function BlockEditor({
   );
 }
 
-export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Props) {
-  const person = data.persons.find((p) => p.id === personId);
+const same = (a: Person, b: Person) => JSON.stringify(a) === JSON.stringify(b);
+
+export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose, confirm }: Props) {
+  const [person, setPerson] = useState<Person>(initial);
+  const [showErrors, setShowErrors] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const fid = useId();
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  const dirty = isNew || !same(person, initial);
 
-  // Fokus hineinsetzen, Fokus-Falle, Esc schließt
+  const { open, close } = data.settings;
+  const nameMissing = !person.name.trim();
+  const blockErrors = [...blockListIssues(person.normBlocks, open, close), ...(person.tueBlocks ? blockListIssues(person.tueBlocks, open, close) : [])];
+  const invalid = nameMissing || blockErrors.length > 0;
+
+  const requestClose = () => {
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    confirm({
+      title: isNew ? 'Neue Person verwerfen?' : 'Änderungen verwerfen?',
+      body: <p>{isNew ? 'Die Person wurde noch nicht gespeichert und wird nicht angelegt.' : `Die Änderungen an „${initial.name}“ sind noch nicht gespeichert und gehen verloren.`}</p>,
+      confirmLabel: 'Verwerfen',
+      danger: true,
+      onConfirm: onClose,
+    });
+  };
+  const closeRef = useRef(requestClose);
+  closeRef.current = requestClose;
+
+  const save = () => {
+    if (invalid) {
+      setShowErrors(true);
+      if (nameMissing) ref.current?.querySelector<HTMLInputElement>('input[data-autofocus]')?.focus();
+      return;
+    }
+    onSave({ ...person, name: person.name.trim() });
+  };
+
+  // Fokus hineinsetzen, Fokus-Falle, Esc schließt (mit Rückfrage bei Änderungen)
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const name = el.querySelector<HTMLInputElement>('input[data-autofocus]');
-    if (name) {
-      name.focus();
-      if (name.value === 'Neue Person') name.select();
-    } else el.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+    el.querySelector<HTMLInputElement>('input[data-autofocus]')?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !document.querySelector('dialog[open]')) {
         e.preventDefault();
-        onCloseRef.current();
+        closeRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -109,32 +140,53 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
     // nur beim Öffnen: sonst springt der Fokus bei jeder Eingabe zurück
-  }, [personId]);
+  }, [initial.id]);
 
-  if (!person) return null;
-  const upd = (patch: Partial<Person>) => dispatch({ type: 'updatePerson', id: person.id, patch });
-  const { open, close } = data.settings;
+  // Fenster schließen mit ungespeichertem Profil verhindern
+  useEffect(() => {
+    if (!dirty) return;
+    const onBefore = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBefore);
+    return () => window.removeEventListener('beforeunload', onBefore);
+  }, [dirty]);
+
+  const upd = (patch: Partial<Person>) => setPerson((p) => ({ ...p, ...patch }));
   const leadsFor = data.persons.filter((p) => p.mentorId === person.id).map((p) => p.name);
   const hasTest = !!data.plans.test;
   const newBlock = (): Block => ({ id: uid('n'), start: 8, end: 9, type: 'betreuung', verb: 'weich' });
 
   return (
     <>
-      <div className="overlay" onClick={onClose} />
+      <div className="overlay" onClick={requestClose} />
       <div className="drawer" ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 2 }}>
-          <h2 id={titleId}>{person.name || 'Neue Person'}</h2>
-          <button className="linkbtn muted" style={{ textDecoration: 'none' }} onClick={onClose}>
-            Schließen ✕
+        <div className="drawer-head">
+          <div>
+            <h2 id={titleId}>{isNew ? 'Neue Person' : initial.name}</h2>
+            <div className="hint">Personalprofil</div>
+          </div>
+          <button className="icon-btn" onClick={requestClose} aria-label="Schließen" title="Schließen">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
           </button>
         </div>
-        <div className="hint" style={{ marginBottom: 16 }}>Personalprofil</div>
 
+        <div className="drawer-body">
         <div className="field">
           <label className="field-label" htmlFor={`${fid}-name`}>Name</label>
-          <input id={`${fid}-name`} data-autofocus className="input" value={person.name} onChange={(e) => upd({ name: e.target.value })} />
+          <input
+            id={`${fid}-name`}
+            data-autofocus
+            className={`input${showErrors && nameMissing ? ' invalid' : ''}`}
+            value={person.name}
+            placeholder="z. B. Anna Schmidt"
+            aria-invalid={showErrors && nameMissing}
+            aria-describedby={showErrors && nameMissing ? `${fid}-name-err` : undefined}
+            onChange={(e) => upd({ name: e.target.value })}
+          />
+          {showErrors && nameMissing && <div id={`${fid}-name-err`} className="field-error">Bitte einen Namen eingeben.</div>}
         </div>
-
         <div className="field">
           <label className="check">
             <input type="checkbox" checked={person.fk} onChange={() => upd({ fk: !person.fk })} />
@@ -180,14 +232,12 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
         </fieldset>
 
         <div className="note">
-          Normalarbeitszeiten sind die Vorlage für den Plan. Änderungen hier wirken nicht direkt auf den Plan, sondern erscheinen dort als Hinweis
-          „weicht von der Normalarbeitszeit ab“.{' '}
-          {hasTest ? (
+          Normalarbeitszeiten sind die Vorlage für den Plan. Nach dem Speichern erscheinen Abweichungen im Rahmenplan als Hinweis und lassen sich in
+          der Testfassung übernehmen.{' '}
+          {!dirty && hasTest && (
             <button className="linkbtn" onClick={() => DAYS.forEach((d) => dispatch({ type: 'resetDayFromProfile', personId: person.id, day: d }))}>
               Alle Tage jetzt in die Testfassung übernehmen
             </button>
-          ) : (
-            'Zum Übernehmen zuerst eine Testfassung anlegen.'
           )}
         </div>
 
@@ -233,23 +283,40 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
           <textarea id={`${fid}-notiz`} className="input" rows={4} style={{ resize: 'vertical' }} value={person.notiz} onChange={(e) => upd({ notiz: e.target.value })} />
         </div>
 
-        <div className="drawer-section">
-          <button
-            className="pill danger"
-            onClick={() =>
-              confirm({
-                title: `${person.name || 'Person'} entfernen?`,
-                body: <p>Das Profil wird gelöscht und die Person aus dem geltenden Plan und der Testfassung entfernt. Das lässt sich nicht rückgängig machen.</p>,
-                confirmLabel: 'Entfernen',
-                danger: true,
-                onConfirm: () => {
-                  onClose();
-                  dispatch({ type: 'removePerson', id: person.id });
-                },
-              })
-            }
-          >
-            Person entfernen
+        {!isNew && (
+          <div className="drawer-section">
+            <button
+              className="pill danger"
+              onClick={() =>
+                confirm({
+                  title: `${initial.name || 'Person'} entfernen?`,
+                  body: <p>Das Profil wird gelöscht und die Person aus dem geltenden Plan und der Testfassung entfernt. Das lässt sich nicht rückgängig machen.</p>,
+                  confirmLabel: 'Entfernen',
+                  danger: true,
+                  onConfirm: () => {
+                    onClose();
+                    dispatch({ type: 'removePerson', id: initial.id });
+                  },
+                })
+              }
+            >
+              Person entfernen
+            </button>
+          </div>
+        )}
+        </div>
+
+        <div className="drawer-foot">
+          {showErrors && invalid ? (
+            <span className="foot-msg error" role="alert">
+              {nameMissing ? 'Name fehlt.' : 'Bitte die markierten Zeiten korrigieren.'}
+            </span>
+          ) : (
+            <span className="foot-msg" aria-live="polite">{dirty ? (isNew ? 'Noch nicht angelegt' : 'Ungespeicherte Änderungen') : 'Alles gespeichert'}</span>
+          )}
+          <button className="pill" onClick={requestClose}>Abbrechen</button>
+          <button className="cta" onClick={save} disabled={!dirty}>
+            {isNew ? 'Person anlegen' : 'Speichern'}
           </button>
         </div>
       </div>
