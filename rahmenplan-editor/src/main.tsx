@@ -9,10 +9,10 @@ import '@fontsource/figtree/latin-500.css';
 import '@fontsource/figtree/latin-600.css';
 import '@fontsource/figtree/latin-700.css';
 import './styles.css';
-import { App } from './App';
+import { Root } from './Root';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );

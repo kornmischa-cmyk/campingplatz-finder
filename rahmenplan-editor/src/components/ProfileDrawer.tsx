@@ -82,7 +82,11 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+    const name = el.querySelector<HTMLInputElement>('input[data-autofocus]');
+    if (name) {
+      name.focus();
+      if (name.value === 'Neue Person') name.select();
+    } else el.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !document.querySelector('dialog[open]')) {
         e.preventDefault();
@@ -128,7 +132,7 @@ export function ProfileDrawer({ data, personId, dispatch, onClose, confirm }: Pr
 
         <div className="field">
           <label className="field-label" htmlFor={`${fid}-name`}>Name</label>
-          <input id={`${fid}-name`} className="input" value={person.name} onChange={(e) => upd({ name: e.target.value })} />
+          <input id={`${fid}-name`} data-autofocus className="input" value={person.name} onChange={(e) => upd({ name: e.target.value })} />
         </div>
 
         <div className="field">

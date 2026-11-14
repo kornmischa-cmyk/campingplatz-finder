@@ -33,7 +33,7 @@ export function PersonalView({ data, dispatch, onOpenProfile }: Props) {
     <div className="personal">
       <p className="hint" style={{ marginTop: 0 }}>
         Neue Personen erscheinen zunächst nicht im Plan. Sie tauchen in der Regelprüfung als Abweichung auf und lassen sich in der Testfassung mit
-        „Normalzeit übernehmen“ einplanen.
+        „Fehlende Personen einplanen“ in den Plan holen.
       </p>
       {groupedPersons(data).map(({ group, members }) => {
         const gc = groupColor(data.groups, group.id);

@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import type { AppData, Day, Variant } from '../domain/types';
 import { DAYS, TYPE_LABEL } from '../domain/types';
 import { evaluateDay, fkShort, totShort, weekTable, type DayResult } from '../domain/rules';
-import { blocksOf } from '../domain/plan';
+import { blocksOf, templateFor } from '../domain/plan';
 import { applyDrag, canDrag, isLocked, planDrag, type DragMode } from '../domain/drag';
 import { fmt, fmtDecimal, fmtShort, STEP } from '../domain/time';
-import type { Action } from '../state/store';
+import { missingCount, type Action } from '../state/store';
 import { fmtDate } from '../lib/download';
 import { Timeline, type Selection } from './Timeline';
 import type { ConfirmRequest } from './ConfirmDialog';
@@ -21,11 +21,12 @@ interface Props {
   setDay: (d: Day) => void;
   onOpenProfile: (personId: string, opener: HTMLElement) => void;
   confirm: (r: ConfirmRequest) => void;
+  goTo: (view: 'personal' | 'settings') => void;
 }
 
 const DAY_FULL: Record<Day, string> = { Mo: 'Montag', Di: 'Dienstag', Mi: 'Mittwoch', Do: 'Donnerstag', Fr: 'Freitag' };
 
-export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onOpenProfile, confirm }: Props) {
+export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onOpenProfile, confirm, goTo }: Props) {
   const { settings, persons } = data;
   const hasTest = !!data.plans.test;
   const effVariant: Variant = variant === 'test' && hasTest ? 'test' : 'geltend';
@@ -135,6 +136,11 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
     const s = result.slots.find((x) => Math.abs(x.h - h - 0.5) < 1e-9) ?? result.slots.find((x) => Math.abs(x.h - h) < 1e-9);
     if (s) covHours.push({ h, label: `${s.tot} / ${s.fk}` });
   }
+  const missing = missingCount(data, plan);
+  const missingNames = persons
+    .filter((p) => DAYS.some((d) => !blocksOf(plan, p.id, d).length && templateFor(p, d).length))
+    .map((p) => p.name)
+    .join(', ');
   const unlockable = !!selBlock && effVariant === 'test' && isLocked(selBlock) && (selBlock.type === 'betreuung' || selBlock.type === 'verfuegung');
 
   return (
@@ -174,6 +180,53 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
           </button>
         </div>
       </div>
+
+      {persons.length === 0 ? (
+        <div className="card onboarding">
+          <h2>So geht’s los</h2>
+          <ol>
+            <li>
+              <strong>Kita einrichten:</strong> Name, Öffnungszeit und Gruppen (mit Kinderzahl und Alter).{' '}
+              <button className="linkbtn" onClick={() => goTo('settings')}>Zu den Einstellungen</button>
+            </li>
+            <li>
+              <strong>Personal anlegen:</strong> pro Person Qualifikation, „zählt als Fachkraft“, Soll-Stunden, Arbeitstage und Normalarbeitszeiten.{' '}
+              <button className="linkbtn" onClick={() => goTo('personal')}>Zum Personal</button>
+            </li>
+            <li>
+              <strong>Einplanen:</strong> Zurück im Rahmenplan „Testfassung“ anlegen, „Fehlende Personen einplanen“, Zeiten verschieben und prüfen, dann
+              „Als geltend übernehmen“.
+            </li>
+          </ol>
+        </div>
+      ) : (
+        missing > 0 && (
+          <div className="banner warn">
+            <span style={{ flex: '1 1 320px' }}>
+              <strong>
+                {missing === 1 ? '1 Arbeitstag ist' : `${missing} Arbeitstage sind`} laut Personalprofil noch nicht eingeplant
+              </strong>{' '}
+              ({missingNames}).
+            </span>
+            {effVariant === 'test' ? (
+              <button className="pill sm" onClick={() => dispatch({ type: 'fillMissingFromProfiles' })}>Fehlende Personen einplanen</button>
+            ) : hasTest ? (
+              <button className="pill sm" onClick={() => setVariant('test')}>In der Testfassung einplanen</button>
+            ) : (
+              <button
+                className="pill sm"
+                onClick={() => {
+                  dispatch({ type: 'createTest' });
+                  dispatch({ type: 'fillMissingFromProfiles' });
+                  setVariant('test');
+                }}
+              >
+                Testfassung anlegen und einplanen
+              </button>
+            )}
+          </div>
+        )
+      )}
 
       <div className="days" role="group" aria-label="Wochentag">
         {DAYS.map((d) => {

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { AppData, Block, Day, Group, Person, Settings } from '../domain/types';
+import { DAYS } from '../domain/types';
 import { adoptTest, blocksOf, clonePlan, templateFor, withDayBlocks } from '../domain/plan';
-import { loadLocal, saveLocal, STORAGE_KEY, parseBackup } from '../domain/storage';
-import { seedData } from '../domain/seed';
+import { parseBackup, toBackup } from '../domain/storage';
+import type { Backend } from '../lib/fileStore';
 import { uid } from '../domain/time';
 
 export type Action =
@@ -15,6 +16,7 @@ export type Action =
   | { type: 'setTestDay'; personId: string; day: Day; blocks: Block[] }
   | { type: 'resetDayFromProfile'; personId: string; day: Day }
   | { type: 'setUnlocked'; personId: string; day: Day; blockId: string; unlocked: boolean }
+  | { type: 'fillMissingFromProfiles' }
   | { type: 'createTest' }
   | { type: 'discardTest' }
   | { type: 'adoptTest' }
@@ -63,6 +65,19 @@ export function reducer(state: AppData, a: Action): AppData {
       );
       return { ...state, plans: { ...state.plans, test: withDayBlocks(test, a.personId, a.day, bl) } };
     }
+    case 'fillMissingFromProfiles': {
+      // Nicht-destruktiv: plant nur Personen/Tage ein, die laut Profil arbeiten, im Plan aber fehlen.
+      let test = state.plans.test;
+      if (!test) return state;
+      for (const p of state.persons) {
+        for (const d of DAYS) {
+          if (blocksOf(test, p.id, d).length) continue;
+          const tpl = templateFor(p, d);
+          if (tpl.length) test = withDayBlocks(test, p.id, d, tpl.map((b) => ({ ...b, id: uid('b') })));
+        }
+      }
+      return { ...state, plans: { ...state.plans, test } };
+    }
     case 'createTest':
       if (state.plans.test) return state;
       return { ...state, plans: { ...state.plans, test: clonePlan(state.plans.geltend, now()) } };
@@ -76,44 +91,191 @@ export function reducer(state: AppData, a: Action): AppData {
   }
 }
 
+/** Personen/Tage, die laut Profil arbeiten, in der Fassung aber fehlen. */
+export function missingCount(state: AppData, plan: AppData['plans']['geltend']): number {
+  let n = 0;
+  for (const p of state.persons) for (const d of DAYS) if (!blocksOf(plan, p.id, d).length && templateFor(p, d).length) n++;
+  return n;
+}
+
+export type SaveStatus =
+  | { kind: 'saved'; at: Date | null }
+  | { kind: 'pending' }
+  | { kind: 'error'; message: string; canReconnect: boolean }
+  | { kind: 'conflict' };
+
 export interface Store {
   data: AppData;
   dispatch: (a: Action) => void;
-  /** false, wenn der Browser das Speichern verweigert */
-  saved: boolean;
+  status: SaveStatus;
+  /** Meldung, wenn ein neuer Stand von außen geladen wurde */
+  notice: string | null;
+  clearNotice: () => void;
+  /** Konflikt: eigene Fassung speichern (die andere landet in den Sicherungen) */
+  keepMine: () => Promise<void>;
+  /** Konflikt: andere Fassung laden (die eigene landet in den Sicherungen) */
+  takeTheirs: () => Promise<void>;
+  /** Nach verlorenem Zugriff erneut verbinden und speichern */
+  retry: () => Promise<void>;
 }
 
-function init(): AppData {
-  return loadLocal() ?? seedData();
-}
+export const serialize = (d: AppData) => toBackup(d);
+const SAVE_DELAY = 500;
+const POLL_MS = 4000;
 
-export function useStore(): Store {
-  const [data, dispatchRaw] = useReducer(reducer, undefined, init);
-  const [saved, setSaved] = useState(true);
-  const fromOtherTab = useRef(false);
+export function useStore(initial: AppData, backend: Backend): Store {
+  const [data, dispatchRaw] = useReducer(reducer, initial);
+  const [status, setStatus] = useState<SaveStatus>({ kind: 'saved', at: null });
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (fromOtherTab.current) {
-      fromOtherTab.current = false;
-      return;
-    }
-    setSaved(saveLocal(data));
-  }, [data]);
+  const lastText = useRef(serialize(initial)); // Stand, der in der Quelle liegt
+  const dirty = useRef(false);
+  const busy = useRef(false);
+  const conflict = useRef(false);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
-  // Zweiter Tab/Fenster: Änderungen übernehmen, statt sie beim nächsten Speichern zu überschreiben.
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY || !e.newValue) return;
-      const res = parseBackup(e.newValue);
-      if (typeof res !== 'string') {
-        fromOtherTab.current = true;
-        dispatchRaw({ type: 'replaceAll', data: res });
+  const fail = (e: unknown) => {
+    const name = (e as { name?: string })?.name;
+    setStatus({
+      kind: 'error',
+      canReconnect: name === 'NotAllowedError' || name === 'SecurityError',
+      message:
+        name === 'NotAllowedError' || name === 'SecurityError'
+          ? 'Kein Zugriff mehr auf den Datenordner.'
+          : name === 'NotFoundError'
+            ? 'Der Datenordner wurde nicht gefunden (verschoben oder gelöscht?).'
+            : 'Speichern fehlgeschlagen.',
+    });
+  };
+
+  const doSave = useCallback(
+    async (force = false) => {
+      if (busy.current) return;
+      const text = serialize(dataRef.current);
+      if (text === lastText.current && !force) {
+        dirty.current = false;
+        setStatus((s) => (s.kind === 'pending' ? { kind: 'saved', at: new Date() } : s));
+        return;
       }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+      busy.current = true;
+      try {
+        const res = await backend.save(text, { force });
+        if (res === 'conflict') {
+          conflict.current = true;
+          setStatus({ kind: 'conflict' });
+        } else {
+          lastText.current = text;
+          conflict.current = false;
+          // während des Speicherns weitere Änderungen? dann bleibt es „pending“
+          dirty.current = serialize(dataRef.current) !== text;
+          setStatus(dirty.current ? { kind: 'pending' } : { kind: 'saved', at: new Date() });
+        }
+      } catch (e) {
+        fail(e);
+      } finally {
+        busy.current = false;
+      }
+    },
+    [backend],
+  );
+
+  // Automatisch speichern (kurz verzögert)
+  useEffect(() => {
+    if (serialize(data) === lastText.current) return;
+    dirty.current = true;
+    if (conflict.current) return; // erst Konflikt auflösen
+    setStatus({ kind: 'pending' });
+    const t = setTimeout(() => void doSave(), SAVE_DELAY);
+    return () => clearTimeout(t);
+  }, [data, doSave]);
+
+  // Nach dem Ende eines Speichervorgangs liegengebliebene Änderungen nachziehen
+  useEffect(() => {
+    if (status.kind !== 'pending' || busy.current) return;
+    const t = setTimeout(() => void doSave(), SAVE_DELAY);
+    return () => clearTimeout(t);
+  }, [status, doSave]);
+
+  const adopt = useCallback((text: string) => {
+    const res = parseBackup(text);
+    if (typeof res === 'string') return false;
+    lastText.current = serialize(res);
+    dispatchRaw({ type: 'replaceAll', data: res });
+    return true;
   }, []);
 
+  // Änderungen von außen (andere Person / anderes Fenster) erkennen
+  useEffect(() => {
+    const check = async () => {
+      if (busy.current || dirty.current || conflict.current) return;
+      try {
+        const text = await backend.readIfChanged();
+        if (text === null) return;
+        if (dirty.current) {
+          // genau in diesem Moment lokal geändert → nicht still übernehmen
+          conflict.current = true;
+          setStatus({ kind: 'conflict' });
+          return;
+        }
+        if (adopt(text)) setNotice('Neuer Stand aus der Plandatei geladen (von einer anderen Person oder einem anderen Fenster gespeichert).');
+      } catch {
+        /* nächster Versuch beim nächsten Intervall */
+      }
+    };
+    const iv = setInterval(check, POLL_MS);
+    window.addEventListener('focus', check);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('focus', check);
+    };
+  }, [backend, adopt]);
+
+  // Schließen mit ungespeicherten Änderungen verhindern
+  useEffect(() => {
+    const onBefore = (e: BeforeUnloadEvent) => {
+      if (dirty.current || busy.current || conflict.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBefore);
+    return () => window.removeEventListener('beforeunload', onBefore);
+  }, []);
+
+  const keepMine = useCallback(async () => {
+    try {
+      const theirs = await backend.readNow();
+      if (theirs !== null && backend.backupCopy) await backend.backupCopy(theirs, 'ueberschrieben');
+      conflict.current = false;
+      await doSave(true);
+    } catch (e) {
+      fail(e);
+    }
+  }, [backend, doSave]);
+
+  const takeTheirs = useCallback(async () => {
+    try {
+      if (backend.backupCopy) await backend.backupCopy(serialize(dataRef.current), 'verworfen');
+      const theirs = await backend.readNow();
+      conflict.current = false;
+      dirty.current = false;
+      if (theirs === null || !adopt(theirs)) {
+        await doSave(true);
+        return;
+      }
+      setStatus({ kind: 'saved', at: new Date() });
+    } catch (e) {
+      fail(e);
+    }
+  }, [backend, adopt, doSave]);
+
+  const retry = useCallback(async () => {
+    if (backend.reconnect && !(await backend.reconnect())) return;
+    await doSave();
+  }, [backend, doSave]);
+
   const dispatch = useCallback((a: Action) => dispatchRaw(a), []);
-  return { data, dispatch, saved };
+  const clearNotice = useCallback(() => setNotice(null), []);
+  return { data, dispatch, status, notice, clearNotice, keepMine, takeTheirs, retry };
 }

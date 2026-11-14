@@ -10,7 +10,8 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Nutzung | Nur die Kita-Leitung, Desktop/Laptop (Windows + Edge/Chrome), kein Login |
 | Auslieferung | Eine einzelne HTML-Datei, läuft offline per Doppelklick (kein Internet vor Ort) |
 | Stack | Vite + React + TypeScript + Vitest (kein zweites Next.js, da kein Server nötig) |
-| Daten | localStorage + JSON-Sicherung (Export/Import), Erinnerung nach 7 Tagen |
+| Daten | **Plandatei in einem gewählten Ordner** (File System Access API, Edge/Chrome), automatisch gespeichert, Tageskopien in `Sicherungen` (30 Tage). Rückfall für andere Browser: localStorage + JSON-Export |
+| Mehrere Personen | Sie arbeiten nacheinander oder parallel mit derselben Datei. Änderungen anderer werden automatisch geladen (Prüfung alle 4 s und beim Fensterwechsel). Bei gleichzeitigen Änderungen gibt es einen Konflikt-Dialog, nie stilles Überschreiben. |
 | Teilen im Team | Druck/PDF und CSV, **nur für den geltenden Plan** (Testfassungen ggf. später) |
 | Fassungen | Geltender Plan + 1 Testfassung; „Übernehmen“ ersetzt den geltenden Plan (keine Historie) |
 | Profil vs. Plan | **Getrennt.** Das Profil hält Stammdaten und Normalarbeitszeiten (Vorlage). Der Plan ist eine eigene Blockliste pro Fassung. Profiländerungen wirken nicht still auf den Plan, sondern erzeugen den Hinweis „weicht von der Normalarbeitszeit ab“; in der Testfassung per „Normalzeit übernehmen“ anwendbar. |
@@ -55,4 +56,9 @@ Wochenübersicht und Pausenregeln. Beschriftungsregel jetzt ca. 7 px/Zeichen, Pa
 - Im Plan lassen sich Blöcke nur verschieben und in der Länge ändern, nicht anlegen, löschen oder im Typ ändern. Grundlegende Änderungen laufen über das Profil und „Normalzeit übernehmen“.
 - Kein Rückgängig (Strg+Z) in der Testfassung.
 - Die Zeitleiste bietet für Screenreader noch keine alternative Tabellen- oder Listenansicht.
-- Die Speicherung unter `file://` hängt am Browser. Ist das zu fragil, wäre der nächste Schritt eine Desktop-App (z. B. Tauri) mit Datei-Speicherung. Die Datenschicht (`src/domain/storage.ts`) ist dafür gekapselt.
+- Der Ordner-Dialog und das Wiederöffnen eines gemerkten Ordners ließen sich im Container nicht automatisiert testen
+  (nativer Dialog; Chromium stürzt im Test beim Wiedereinlesen *browserinterner* Testordner aus IndexedDB ab).
+  Getestet sind Anlegen, Speichern, Tageskopien, Übernahme fremder Änderungen und Konflikte mit zwei Fenstern.
+  Der erste echte Test auf Windows mit Edge/Chrome steht noch aus.
+- Keine Sperre gegen gleichzeitiges Bearbeiten, nur Konflikterkennung. Bei der Prüfung alle 4 s ist ein Konflikt
+  selten, aber möglich.

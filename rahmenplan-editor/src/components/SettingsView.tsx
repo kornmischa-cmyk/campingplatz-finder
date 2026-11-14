@@ -12,6 +12,9 @@ interface Props {
   onImport: () => void;
   onLoadSample: () => void;
   onStartEmpty: () => void;
+  storageLabel: string;
+  storageKind: 'file' | 'browser' | 'demo';
+  onChangeStorage?: () => void;
 }
 
 const DAY_TIMES: number[] = [];
@@ -32,7 +35,7 @@ const num = (v: string, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample, onStartEmpty }: Props) {
+export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample, onStartEmpty, storageLabel, storageKind, onChangeStorage }: Props) {
   const s = data.settings;
   const set = (patch: Partial<Settings>) => dispatch({ type: 'setSettings', patch });
   const setGroups = (groups: Group[]) => dispatch({ type: 'setGroups', groups });
@@ -163,13 +166,27 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
 
       <div className="card">
         <h2>Daten</h2>
-        <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>
-          Alle Daten liegen nur in diesem Browser auf diesem Rechner. Sie gehen verloren, wenn die Browserdaten gelöscht werden, die Datei an einen
-          anderen Ort verschoben oder ein anderer Browser genutzt wird. Exportiere deshalb regelmäßig eine Sicherung und lege sie z. B. auf einem
-          USB-Stick oder Netzlaufwerk ab. Letzte Sicherung: <strong>{fmtDate(data.meta.lastBackup)}</strong>.
-        </p>
+        {storageKind === 'file' ? (
+          <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>
+            Gespeichert wird automatisch in <strong>{storageLabel}</strong>. Im selben Ordner liegt „Sicherungen“ mit einer Kopie pro Tag (die
+            letzten 30 Tage). Wer mitarbeiten soll, öffnet die App und wählt denselben Ordner. Ändern zwei Personen gleichzeitig, fragt die App nach,
+            statt still zu überschreiben.
+          </p>
+        ) : storageKind === 'demo' ? (
+          <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>Beispielmodus: Es wird nichts gespeichert.</p>
+        ) : (
+          <p className="hint" style={{ marginTop: 0, maxWidth: 720 }}>
+            Die Daten liegen nur in diesem Browser. Sie gehen verloren, wenn die Browserdaten gelöscht werden oder ein anderer Browser genutzt wird.
+            Exportiere regelmäßig eine Sicherung. Letzte Sicherung: <strong>{fmtDate(data.meta.lastBackup)}</strong>.
+          </p>
+        )}
         <div className="list-row">
-          <button className="cta" onClick={onBackup}>Sicherung exportieren (.json)</button>
+          {onChangeStorage && (
+            <button className="pill" onClick={onChangeStorage}>
+              {storageKind === 'file' ? 'Anderen Datenordner wählen …' : 'Zum Start (Ordner wählen) …'}
+            </button>
+          )}
+          <button className={storageKind === 'browser' ? 'cta' : 'pill'} onClick={onBackup}>Kopie exportieren (.json)</button>
           <button className="pill" onClick={onImport}>Sicherung importieren …</button>
         </div>
         <div className="list-row" style={{ marginTop: 10 }}>

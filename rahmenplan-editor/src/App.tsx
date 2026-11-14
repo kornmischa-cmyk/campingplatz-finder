@@ -4,7 +4,9 @@ import { planToCsv } from './domain/csv';
 import { emptyData, seedData } from './domain/seed';
 import { parseBackup, toBackup } from './domain/storage';
 import { fmtShort } from './domain/time';
-import { useStore } from './state/store';
+import { useStore, type SaveStatus } from './state/store';
+import type { AppData } from './domain/types';
+import type { Backend } from './lib/fileStore';
 import { dateStamp, daysSince, downloadText, fmtDate } from './lib/download';
 import { PlanView } from './components/PlanView';
 import { PersonalView } from './components/PersonalView';
@@ -16,22 +18,52 @@ import { ConfirmDialog, type ConfirmRequest } from './components/ConfirmDialog';
 type View = 'plan' | 'personal' | 'settings';
 const BACKUP_REMIND_DAYS = 7;
 
-export function App() {
-  const { data, dispatch, saved } = useStore();
+interface Props {
+  initial: AppData;
+  backend: Backend;
+  startInfo?: string;
+  /** Anderen Datenordner wählen (nur mit Datei-Zugriff) */
+  onChangeStorage?: () => void;
+}
+
+function statusText(s: SaveStatus, backend: Backend): string {
+  if (backend.kind === 'demo') return 'Beispiel · wird nicht gespeichert';
+  switch (s.kind) {
+    case 'pending':
+      return 'Speichert …';
+    case 'saved':
+      return backend.kind === 'file'
+        ? `Gespeichert${s.at ? ' ' + s.at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : ''} · ${backend.label}`
+        : 'Nur im Browser gespeichert';
+    case 'conflict':
+      return 'Nicht gespeichert – Konflikt';
+    case 'error':
+      return 'Nicht gespeichert!';
+  }
+}
+
+export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
+  const { data, dispatch, status, notice, clearNotice, keepMine, takeTheirs, retry } = useStore(initial, backend);
   const [view, setView] = useState<View>('plan');
   const [variant, setVariant] = useState<Variant>(data.plans.test ? 'test' : 'geltend');
   const [day, setDay] = useState<Day>('Di');
   const [profile, setProfile] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(startInfo ?? null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
+    const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  useEffect(() => {
+    if (notice) {
+      setToast(notice);
+      clearNotice();
+    }
+  }, [notice, clearNotice]);
 
   const openProfile = useCallback((id: string, el: HTMLElement) => {
     opener.current = el;
@@ -49,7 +81,7 @@ export function App() {
   const backup = () => {
     dispatch({ type: 'markBackup' });
     downloadText(`rahmenplan-sicherung-${slug}-${dateStamp()}.json`, toBackup({ ...data, meta: { ...data.meta, lastBackup: new Date().toISOString() } }), 'application/json');
-    setToast('Sicherung wurde heruntergeladen.');
+    setToast('Kopie der Daten wurde heruntergeladen.');
   };
   const exportCsv = () => {
     downloadText(`rahmenplan-${slug}-${dateStamp()}.csv`, planToCsv(data), 'text/csv;charset=utf-8');
@@ -69,13 +101,14 @@ export function App() {
       title: 'Sicherung importieren?',
       body: (
         <p>
-          Die aktuellen Daten in diesem Browser werden vollständig durch die Sicherung ersetzt ({res.persons.length} Personen, {res.groups.length} Gruppen,
+          Die aktuellen Daten werden vollständig durch die Sicherung ersetzt ({res.persons.length} Personen, {res.groups.length} Gruppen,
           geltend seit {fmtDate(res.plans.geltend.since)}{res.plans.test ? ', mit Testfassung' : ''}).
         </p>
       ),
       confirmLabel: 'Ersetzen',
       danger: true,
       onConfirm: () => {
+        void backend.backupCopy?.(toBackup(data), 'vor-import');
         dispatch({ type: 'replaceAll', data: res });
         setVariant(res.plans.test ? 'test' : 'geltend');
         setToast('Sicherung wurde importiert.');
@@ -86,10 +119,16 @@ export function App() {
   const replaceWith = (title: string, body: string, make: () => typeof data) =>
     setConfirmReq({
       title,
-      body: <p>{body} Alle aktuellen Daten in diesem Browser werden ersetzt. Exportiere vorher eine Sicherung, wenn du sie behalten willst.</p>,
+      body: (
+        <p>
+          {body} Alle aktuellen Daten werden ersetzt.{' '}
+          {backend.kind === 'file' ? 'Der bisherige Stand wird vorher in den Ordner „Sicherungen“ kopiert.' : 'Exportiere vorher eine Sicherung, wenn du sie behalten willst.'}
+        </p>
+      ),
       confirmLabel: 'Ersetzen',
       danger: true,
       onConfirm: () => {
+        void backend.backupCopy?.(toBackup(data), 'vor-ersetzen');
         const d = make();
         dispatch({ type: 'replaceAll', data: d });
         setVariant(d.plans.test ? 'test' : 'geltend');
@@ -98,7 +137,8 @@ export function App() {
 
   const kinder = data.groups.reduce((a, g) => a + (g.kinder || 0), 0);
   const stunden = data.persons.reduce((a, p) => a + p.soll, 0);
-  const backupDue = daysSince(data.meta.lastBackup) > BACKUP_REMIND_DAYS;
+  const backupDue = backend.kind === 'browser' && daysSince(data.meta.lastBackup) > BACKUP_REMIND_DAYS;
+  const statusTone = status.kind === 'error' || status.kind === 'conflict' ? 'bad' : status.kind === 'pending' ? 'pending' : 'ok';
 
   return (
     <>
@@ -117,7 +157,10 @@ export function App() {
               <span className="tools-label">Geltenden Plan teilen:</span>
               <button className="pill sm" onClick={print}>Drucken / PDF</button>
               <button className="pill sm" onClick={exportCsv}>CSV (Excel)</button>
-              <button className="pill sm" onClick={backup}>Sicherung</button>
+            </div>
+            <div className={`save-status ${statusTone}`} role="status" aria-live="polite" title={backend.label}>
+              <span className="save-dot" aria-hidden="true" />
+              {statusText(status, backend)}
             </div>
             <nav className="seg" aria-label="Ansicht">
               <button aria-pressed={view === 'plan'} onClick={() => setView('plan')}>Rahmenplan</button>
@@ -127,21 +170,41 @@ export function App() {
           </div>
         </header>
 
-        {!saved && (
+        {status.kind === 'conflict' && (
           <div className="banner bad" role="alert">
-            Der Browser erlaubt kein Speichern. Änderungen gehen beim Schließen verloren.
-            <button className="pill sm" onClick={backup}>Jetzt Sicherung exportieren</button>
+            <span style={{ flex: '1 1 380px' }}>
+              <strong>Die Plandatei wurde zwischenzeitlich woanders geändert</strong> (z. B. von einer anderen Person oder in einem zweiten Fenster).
+              Deine letzten Änderungen sind noch nicht gespeichert. Die jeweils andere Fassung wird in „Sicherungen“ aufgehoben.
+            </span>
+            <button className="pill sm" onClick={() => void takeTheirs()}>Andere Fassung laden</button>
+            <button className="pill sm danger" onClick={() => void keepMine()}>Meine Fassung speichern</button>
           </div>
         )}
-        {saved && backupDue && !data.meta.beispieldaten && (
+        {status.kind === 'error' && (
+          <div className="banner bad" role="alert">
+            <span style={{ flex: '1 1 380px' }}>
+              <strong>{status.message}</strong> Änderungen sind noch nicht gespeichert.
+            </span>
+            <button className="pill sm" onClick={() => void retry()}>{status.canReconnect ? 'Zugriff erlauben und speichern' : 'Erneut versuchen'}</button>
+            <button className="pill sm" onClick={backup}>Kopie herunterladen</button>
+          </div>
+        )}
+        {backend.kind === 'browser' && (
           <div className="banner warn">
-            Die Daten liegen nur in diesem Browser. Letzte Sicherung: {fmtDate(data.meta.lastBackup)}.
-            <button className="pill sm" onClick={backup}>Jetzt sichern</button>
+            Dieser Browser kann nicht in eine Datei speichern – die Daten liegen nur im Browser. Besser mit Edge oder Chrome öffnen.
+            {backupDue && <> Letzte Sicherung: {fmtDate(data.meta.lastBackup)}.</>}
+            <button className="pill sm" onClick={backup}>Sicherung exportieren</button>
           </div>
         )}
-        {data.meta.beispieldaten && (
+        {backend.kind === 'demo' && (
           <div className="banner info">
-            Du siehst fiktive Beispieldaten.
+            Du siehst fiktive Beispieldaten. Änderungen werden nicht gespeichert.
+            {onChangeStorage && <button className="linkbtn" onClick={onChangeStorage}>Zum Start: eigenen Plan anlegen</button>}
+          </div>
+        )}
+        {backend.kind !== 'demo' && data.meta.beispieldaten && (
+          <div className="banner info">
+            Die Plandatei enthält noch die fiktiven Beispieldaten.
             <button className="linkbtn" onClick={() => setView('settings')}>Unter „Einstellungen → Daten“ leer beginnen</button>
           </div>
         )}
@@ -157,6 +220,7 @@ export function App() {
               setDay={setDay}
               onOpenProfile={openProfile}
               confirm={setConfirmReq}
+              goTo={setView}
             />
           )}
           {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} />}
@@ -165,6 +229,9 @@ export function App() {
               data={data}
               dispatch={dispatch}
               onBackup={backup}
+              storageLabel={backend.label}
+              storageKind={backend.kind}
+              onChangeStorage={onChangeStorage}
               onImport={() => fileRef.current?.click()}
               onLoadSample={() => replaceWith('Beispieldaten laden?', 'Die fiktive „Kita Sonnenblume“ wird geladen.', () => seedData())}
               onStartEmpty={() => replaceWith('Leer beginnen?', 'Es wird ein leerer Stand mit einer Gruppe angelegt.', () => emptyData())}
