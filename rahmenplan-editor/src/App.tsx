@@ -6,6 +6,8 @@ import { parseBackup, toBackup } from './domain/storage';
 import { fmtShort } from './domain/time';
 import { useStore, type SaveStatus } from './state/store';
 import type { AppData, Person } from './domain/types';
+import { DAYS } from './domain/types';
+import { profileChanges } from './domain/plan';
 import type { Backend } from './lib/fileStore';
 import { dateStamp, daysSince, downloadText, fmtDate } from './lib/download';
 import { PlanView } from './components/PlanView';
@@ -78,12 +80,41 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
     opener.current = el;
     setProfile({ initial: p, isNew: true });
   }, []);
-  const saveProfile = (p: Person) => {
-    if (data.persons.some((x) => x.id === p.id)) dispatch({ type: 'updatePerson', id: p.id, patch: p });
-    else dispatch({ type: 'addPerson', person: p });
-    setToast(profile?.isNew ? `„${p.name}“ angelegt.` : `„${p.name}“ gespeichert.`);
-    closeProfile();
+  const saveProfile = (p: Person, alsoGeltend: boolean) => {
+    const old = data.persons.find((x) => x.id === p.id) ?? null;
+    const isNew = !old;
+    // Welche Tage betrifft die Änderung, und sind davon welche von Hand angepasst?
+    const testBase = data.plans.test ?? data.plans.geltend;
+    const t = profileChanges(old, p, testBase, data);
+    const g = alsoGeltend ? profileChanges(old, p, data.plans.geltend, data) : { changed: [], manual: [] };
+    const manual = DAYS.filter((d) => t.manual.includes(d) || g.manual.includes(d));
+    const changed = t.changed.length + g.changed.length > 0;
+    const done = (overwriteManual: boolean) => {
+      dispatch({ type: 'saveProfile', person: p, alsoGeltend, overwriteManual });
+      if (changed) setVariant('test');
+      const wo = !changed ? '' : alsoGeltend ? ' Plan in Testfassung und geltendem Plan aktualisiert.' : ' Testfassung aktualisiert.';
+      setToast(`„${p.name}“ ${isNew ? 'angelegt' : 'gespeichert'}.${wo}`);
+      closeProfile();
+    };
+    if (!manual.length) {
+      done(false);
+      return;
+    }
+    setConfirmReq({
+      title: 'Angepasste Tage überschreiben?',
+      body: (
+        <p>
+          Bei {p.name} wurden diese Tage im Plan von Hand angepasst: <strong>{manual.join(', ')}</strong>. Sollen sie durch die neuen Zeiten aus dem
+          Profil ersetzt werden? Unveränderte Tage werden in jedem Fall aktualisiert.
+        </p>
+      ),
+      confirmLabel: 'Überschreiben',
+      onConfirm: () => done(true),
+      secondaryLabel: 'Angepasste Tage behalten',
+      onSecondary: () => done(false),
+    });
   };
+
   const closeProfile = useCallback(() => {
     setProfile(null);
     // Fokus an den Auslöser zurückgeben (falls er noch existiert)

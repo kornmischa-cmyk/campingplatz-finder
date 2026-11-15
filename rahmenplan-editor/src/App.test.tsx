@@ -70,7 +70,8 @@ describe('App (Smoke)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Person anlegen' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Testfassung anlegen und einplanen' }));
+    // neue Person landet beim Anlegen direkt in der (neu angelegten) Testfassung
+    expect(screen.getByRole('button', { name: 'Testfassung' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ })).toBeTruthy();
     expect(screen.queryByText(/noch nicht eingeplant/)).toBeNull();
   });
@@ -165,5 +166,40 @@ describe('App (Smoke)', () => {
     expect(screen.getByRole('button', { name: /^Anna, Pause, 11:30 bis 12:00/ })).toBeTruthy();
     // Pflichtpause und „am Stück“ behoben, Abweichung weg; übrig bleibt der Hinweis „über 8 h“
     expect(screen.getByRole('button', { name: 'Anna: 1 Hinweis anzeigen' })).toBeTruthy();
+  });
+
+  it('Korrektur „arbeitet montags nicht“: Testfassung und auf Wunsch auch geltender Plan', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Tina/ }));
+    const dlg = screen.getByRole('dialog');
+    fireEvent.click(within(within(dlg).getByRole('group', { name: 'Arbeitstage' })).getByLabelText('Mo'));
+    fireEvent.click(within(dlg).getByLabelText('Auch im geltenden Plan korrigieren'));
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    expect(screen.queryByRole('button', { name: /^Tina, Betreuung/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Geltender Plan' }));
+    expect(screen.queryByRole('img', { name: /^Tina, Betreuung/ })).toBeNull();
+  });
+
+  it('von Hand angepasster Tag: Nachfrage, „behalten“ lässt ihn stehen', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    // Tina Mo von Hand verschieben
+    fireEvent.keyDown(screen.getByRole('button', { name: /^Tina, Betreuung, 07:00 bis 10:00/ }), { key: 'ArrowRight' });
+    fireEvent.click(screen.getByRole('button', { name: 'Personal' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Tina/ }));
+    const dlg = screen.getByRole('dialog');
+    fireEvent.change(within(dlg).getAllByLabelText(/Normalarbeitszeiten, Block 3, Ende/)[0], { target: { value: '14' } });
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Speichern' }));
+    expect(screen.getByRole('heading', { name: 'Angepasste Tage überschreiben?' })).toBeTruthy();
+    expect(within(screen.getByRole('heading', { name: 'Angepasste Tage überschreiben?' }).parentElement!).getByText('Mo')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Angepasste Tage behalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
+    // Mo bleibt von Hand verschoben, Di übernimmt neue Endzeit
+    expect(screen.getByRole('button', { name: /^Tina, Betreuung, 07:15 bis 10:15/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Di: / }));
+    expect(screen.getByRole('button', { name: /^Tina, Betreuung, 10:30 bis 14:00/ })).toBeTruthy();
   });
 });

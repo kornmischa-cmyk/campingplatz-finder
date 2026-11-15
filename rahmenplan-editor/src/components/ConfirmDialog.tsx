@@ -6,6 +6,9 @@ export interface ConfirmRequest {
   confirmLabel: string;
   danger?: boolean;
   onConfirm: () => void;
+  /** optionale zweite Wahl (z. B. „Behalten“) neben Bestätigen und Abbrechen */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 }
 
 /** Modaler Bestätigungsdialog auf Basis von <dialog> (Fokus-Falle und Esc liefert der Browser). */
@@ -27,6 +30,17 @@ export function ConfirmDialog({ req, onClose }: { req: ConfirmRequest | null; on
             <button className="pill" onClick={onClose} autoFocus>
               Abbrechen
             </button>
+            {req.secondaryLabel && (
+              <button
+                className="pill"
+                onClick={() => {
+                  req.onSecondary?.();
+                  onClose();
+                }}
+              >
+                {req.secondaryLabel}
+              </button>
+            )}
             <button
               className={req.danger ? 'cta danger' : 'cta'}
               onClick={() => {

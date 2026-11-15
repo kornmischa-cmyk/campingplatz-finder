@@ -19,6 +19,15 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Profiländerungen wirken auf den Plan (15.11.2026)
+
+- Speichern im Profil überträgt Änderungen an Arbeitstagen, Zeiten und Pausen automatisch in die **Testfassung**
+  (wird bei Bedarf aus dem geltenden Plan angelegt – nur wenn sich am Plan wirklich etwas ändert).
+- Häkchen **„Auch im geltenden Plan korrigieren“** für echte Fehler (z. B. „arbeitet montags nicht“).
+- Unveränderte Tage werden still aktualisiert. Von Hand angepasste Tage: Nachfrage „Überschreiben“ oder
+  „Angepasste Tage behalten“.
+- Neue Personen landen beim Anlegen direkt in der Testfassung.
+
 ## Pausen, Termine, Personen-Indikator (14.11.2026)
 
 - **Automatische Pause:** Ergibt sich aus Normalarbeitszeiten und Terminen eine Arbeitszeit, die eine Pause verlangt,

@@ -43,8 +43,8 @@ export function PersonalView({ data, dispatch, onOpenProfile, onNewPerson }: Pro
   return (
     <div className="personal">
       <p className="hint" style={{ marginTop: 0 }}>
-        Neue Personen erscheinen zunächst nicht im Plan. Sie tauchen in der Regelprüfung als Abweichung auf und lassen sich in der Testfassung mit
-        „Fehlende Personen einplanen“ in den Plan holen.
+        Neue Personen und geänderte Zeiten übernimmt die App beim Speichern automatisch in die Testfassung. In den geltenden Plan kommen sie
+        mit „Als geltend übernehmen“ – oder sofort, wenn du beim Speichern „Auch im geltenden Plan korrigieren“ wählst.
       </p>
       {groupedPersons(data).map(({ group, members }) => {
         const gc = groupColor(data.groups, group.id);

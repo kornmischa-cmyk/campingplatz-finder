@@ -13,7 +13,7 @@ interface Props {
   initial: Person;
   isNew: boolean;
   dispatch: (a: Action) => void;
-  onSave: (p: Person) => void;
+  onSave: (p: Person, alsoGeltend: boolean) => void;
   onClose: () => void;
   confirm: (r: ConfirmRequest) => void;
 }
@@ -128,6 +128,7 @@ const same = (a: Person, b: Person) => JSON.stringify(a) === JSON.stringify(b);
 export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose, confirm }: Props) {
   const [person, setPerson] = useState<Person>(initial);
   const [showErrors, setShowErrors] = useState(false);
+  const [alsoGeltend, setAlsoGeltend] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const fid = useId();
@@ -163,7 +164,7 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
       if (nameMissing) ref.current?.querySelector<HTMLInputElement>('input[data-autofocus]')?.focus();
       return;
     }
-    onSave({ ...person, name: person.name.trim() });
+    onSave({ ...person, name: person.name.trim() }, alsoGeltend);
   };
 
   // Fokus hineinsetzen, Fokus-Falle, Esc schließt (mit Rückfrage bei Änderungen)
@@ -208,7 +209,6 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
 
   const upd = (patch: Partial<Person>) => setPerson((p) => ({ ...p, ...patch }));
   const leadsFor = data.persons.filter((p) => p.mentorId === person.id).map((p) => p.name);
-  const hasTest = !!data.plans.test;
   const newBlock = (): Block => ({ id: uid('n'), start: 8, end: 9, type: 'betreuung', verb: 'weich' });
 
   return (
@@ -285,13 +285,8 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
         </fieldset>
 
         <div className="note">
-          Normalarbeitszeiten sind die Vorlage für den Plan. Nach dem Speichern erscheinen Abweichungen im Rahmenplan als Hinweis und lassen sich in
-          der Testfassung übernehmen.{' '}
-          {!dirty && hasTest && (
-            <button className="linkbtn" onClick={() => DAYS.forEach((d) => dispatch({ type: 'resetDayFromProfile', personId: person.id, day: d }))}>
-              Alle Tage jetzt in die Testfassung übernehmen
-            </button>
-          )}
+          Beim Speichern übernimmt die App Änderungen an Arbeitstagen und Zeiten automatisch in die Testfassung. Echte Fehler (z. B. „arbeitet
+          montags nicht“) lassen sich unten zusätzlich im geltenden Plan korrigieren.
         </div>
 
         <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -409,6 +404,10 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
           ) : (
             <span className="foot-msg" aria-live="polite">{dirty ? (isNew ? 'Noch nicht angelegt' : 'Ungespeicherte Änderungen') : 'Alles gespeichert'}</span>
           )}
+          <label className="check foot-check" title="Für echte Fehler: Die Änderung gilt dann sofort auch im geltenden Plan, nicht erst nach „Als geltend übernehmen“.">
+            <input type="checkbox" checked={alsoGeltend} onChange={() => setAlsoGeltend(!alsoGeltend)} />
+            Auch im geltenden Plan korrigieren
+          </label>
           <button className="pill" onClick={requestClose}>Abbrechen</button>
           <button className="cta" onClick={save} disabled={!dirty}>
             {isNew ? 'Person anlegen' : 'Speichern'}

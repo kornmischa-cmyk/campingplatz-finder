@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { AppData, Block, Day, Group, Person, Settings } from '../domain/types';
 import { DAYS } from '../domain/types';
-import { adoptTest, blocksOf, clonePlan, insertTermin, sameDay, templateFor, withDayBlocks } from '../domain/plan';
+import { adoptTest, applyProfileToPlan, blocksOf, clonePlan, insertTermin, profileChanges, sameDay, templateFor, withDayBlocks } from '../domain/plan';
 import { withAutoPause } from '../domain/pause';
 import type { Termin } from '../domain/types';
 import { parseBackup, toBackup } from '../domain/storage';
@@ -19,6 +19,7 @@ export type Action =
   | { type: 'resetDayFromProfile'; personId: string; day: Day }
   | { type: 'setUnlocked'; personId: string; day: Day; blockId: string; unlocked: boolean }
   | { type: 'fillMissingFromProfiles' }
+  | { type: 'saveProfile'; person: Person; alsoGeltend: boolean; overwriteManual: boolean }
   | { type: 'insertPause'; personId: string; day: Day }
   | { type: 'saveTermin'; termin: Termin }
   | { type: 'deleteTermin'; id: string }
@@ -82,6 +83,20 @@ export function reducer(state: AppData, a: Action): AppData {
         }
       }
       return { ...state, plans: { ...state.plans, test } };
+    }
+    case 'saveProfile': {
+      // Profil speichern und in die Testfassung (auf Wunsch auch in den geltenden Plan) übertragen
+      const oldP = state.persons.find((p) => p.id === a.person.id) ?? null;
+      const persons = oldP ? state.persons.map((p) => (p.id === a.person.id ? a.person : p)) : [...state.persons, a.person];
+      const base = state.plans.test ?? state.plans.geltend;
+      const touchesTest = profileChanges(oldP, a.person, base, state).changed.length > 0;
+      let test = state.plans.test;
+      if (touchesTest) {
+        test ??= clonePlan(state.plans.geltend, new Date().toISOString());
+        test = applyProfileToPlan(test, oldP, a.person, state, a.overwriteManual, () => uid('b'));
+      }
+      const geltend = a.alsoGeltend ? applyProfileToPlan(state.plans.geltend, oldP, a.person, state, a.overwriteManual, () => uid('b')) : state.plans.geltend;
+      return { ...state, persons, plans: { geltend, test } };
     }
     case 'insertPause': {
       const person = state.persons.find((p) => p.id === a.personId);

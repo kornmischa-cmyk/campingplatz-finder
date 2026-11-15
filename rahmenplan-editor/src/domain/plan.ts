@@ -139,3 +139,36 @@ export function blockListIssues(blocks: Block[], open: number, close: number): s
   });
   return out;
 }
+
+export interface ProfileChanges {
+  /** Tage, an denen sich die Vorlage durch die Profiländerung ändert */
+  changed: Day[];
+  /** davon Tage, die im Plan von Hand angepasst wurden (Plan ≠ alte Vorlage) */
+  manual: Day[];
+}
+
+/** Welche Tage einer Fassung betrifft eine Profiländerung? (oldP = null bei neuer Person) */
+export function profileChanges(oldP: Person | null, newP: Person, plan: Plan, ctx: TemplateCtx): ProfileChanges {
+  const changed: Day[] = [];
+  const manual: Day[] = [];
+  for (const d of DAYS) {
+    const before = oldP ? templateFor(oldP, d, ctx) : [];
+    const after = templateFor(newP, d, ctx);
+    const cur = blocksOf(plan, newP.id, d);
+    if (sameDay(before, after) || sameDay(cur, after)) continue;
+    changed.push(d);
+    if (!sameDay(cur, before)) manual.push(d);
+  }
+  return { changed, manual };
+}
+
+/** Überträgt eine Profiländerung in eine Fassung; von Hand angepasste Tage nur mit overwriteManual. */
+export function applyProfileToPlan(plan: Plan, oldP: Person | null, newP: Person, ctx: TemplateCtx, overwriteManual: boolean, newId: () => string): Plan {
+  const { changed, manual } = profileChanges(oldP, newP, plan, ctx);
+  let out = plan;
+  for (const d of changed) {
+    if (manual.includes(d) && !overwriteManual) continue;
+    out = withDayBlocks(out, newP.id, d, templateFor(newP, d, ctx).map((b) => ({ ...b, id: newId() })));
+  }
+  return out;
+}

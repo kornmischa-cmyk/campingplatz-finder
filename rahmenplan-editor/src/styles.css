@@ -386,3 +386,6 @@ dialog.confirm-dialog p { font-size: 14px; margin: 0 0 8px; }
 .pv-betreuung { background: #e4efda; }
 .pv-pause { background: transparent; border: 1.5px dotted var(--pause-line); }
 .pv-besprechung, .pv-anleitung { background: var(--h-bg); }
+
+.foot-check { font-size: 12.5px; margin-right: 4px; }
+.drawer-foot { flex-wrap: wrap; }
