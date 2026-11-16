@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { AppData, Day, Variant } from '../domain/types';
-import { DAYS, TYPE_LABEL } from '../domain/types';
+import { DAYS, TYPE_LABEL, type Block, type BlockType } from '../domain/types';
 import { evaluateDay, fkShort, totShort, weekTable, type DayResult, type Finding } from '../domain/rules';
 import { blocksOf, templateFor } from '../domain/plan';
 import { applyDrag, canDrag, isLocked, planDrag, type DragMode } from '../domain/drag';
-import { fmt, fmtDecimal, fmtShort, STEP } from '../domain/time';
+import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
+import { addBlockAfter, canEdit, deleteBlock, EDIT_TYPES, insertPauseIn, setBlockType, suggestedPause } from '../domain/edit';
 import { missingCount, type Action } from '../state/store';
 import { dienstTage, dienstWochenFindings } from '../domain/dienste';
 import { fmtDate } from '../lib/download';
@@ -61,6 +62,28 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
     const p = planDrag(selBlocks, selIdx, mode, settings.open, settings.close);
     dispatch({ type: 'setTestDay', personId: selected.personId, day: selected.day, blocks: applyDrag(selBlocks, p, delta) });
   };
+
+  const selEditable = !!selBlock && canEdit(selBlock, effVariant);
+  const setSelDay = (blocks: Block[], blockId: string | null) => {
+    if (!selected) return;
+    dispatch({ type: 'setTestDay', personId: selected.personId, day: selected.day, blocks });
+    select(blockId ? { ...selected, blockId } : null);
+  };
+  const pauseLen = selPerson && selBlock ? suggestedPause(selBlocks, settings, selPerson.pauseMinuten ?? 0) : 0;
+  const canPauseHere = selEditable && !!selBlock && (selBlock.type === 'betreuung' || selBlock.type === 'verfuegung') && selBlock.end - selBlock.start >= STEP * 2 - 1e-9;
+  const onInsertPause = () => {
+    if (!selBlock) return;
+    const r = insertPauseIn(selBlocks, selBlock.id, pauseLen, uid('pause'));
+    if (r) setSelDay(r.blocks, r.pauseId);
+  };
+  const onAddAfter = () => {
+    if (!selBlock) return;
+    const id = uid('b');
+    const next = addBlockAfter(selBlocks, selBlock.end, settings.open, settings.close, id);
+    if (next) setSelDay(next, id);
+    else notify('Kein freier Platz mehr an diesem Tag.');
+  };
+  const hasRoomAfter = !!selBlock && !!addBlockAfter(selBlocks, selBlock.end, settings.open, settings.close, 'x');
 
   const weekCounts = (v: 'test' | 'geltend') => {
     const pl = v === 'test' ? data.plans.test : data.plans.geltend;
@@ -148,11 +171,14 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
   const c = result.counts;
   const t = tone(c);
   const statusTitle = c.v ? statusShort(c) : c.h ? 'Keine Probleme' : 'Alles gut besetzt';
+  const abwText = c.i ? (c.i === 1 ? '1 Person weicht' : `${c.i} Personen weichen`) + ' bewusst von der Normalzeit ab.' : '';
   const statusSub = c.v
     ? 'Diese Punkte sollten gelöst sein, bevor der Plan gilt.'
     : c.h
       ? `${statusShort(c)} zum Prüfen – sonst ist alles in Ordnung.`
-      : 'Alle Regeln für diesen Tag sind erfüllt.';
+      : `Alle Regeln für diesen Tag sind erfüllt.${abwText && ' ' + abwText}`;
+  const lautFindings = result.findings.filter((f) => !f.quiet);
+  const leiseFindings = result.findings.filter((f) => f.quiet);
 
   // Besetzung: Säulenhöhe = Personen / max; dunkler Anteil = Fachkräfte
   const maxT = Math.max(4, ...result.slots.map((s) => s.tot));
@@ -193,7 +219,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
         </div>
         <div className="fassung-right">
           <span className="muted">
-            {effVariant === 'geltend' ? `Gilt seit ${fmtDate(data.plans.geltend.since)} · Verschieben geht nur in der Testfassung` : 'Verschieben geht nur in der Testfassung'}
+            {effVariant === 'geltend' ? `Gilt seit ${fmtDate(data.plans.geltend.since)} · Bearbeiten geht nur in der Testfassung` : 'Zeitfenster aufziehen, verschieben, Pausen einziehen'}
           </span>
           {hasTest && (
             <button className="linkbtn danger" onClick={onDiscard}>
@@ -376,7 +402,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               {effVariant === 'geltend'
                 ? 'Der geltende Plan ist schreibgeschützt. Zum Ändern in die Testfassung wechseln.'
                 : selDraggable
-                  ? 'Ziehen verschiebt · Ränder ziehen ändert die Dauer · Tastatur: ←/→, Alt = Beginn, Umschalt = Ende'
+                  ? 'Ziehen verschiebt, Ränder ändern die Dauer · Tasten: ←/→, Alt = Beginn, Umschalt = Ende, Entf = löschen · Neues Zeitfenster: in der Zeile auf eine freie Stelle ziehen'
                   : unlockable
                     ? 'Laut Profil unverrückbar. Zum Ändern bewusst entsperren.'
                     : 'Dieser Blocktyp lässt sich nicht verschieben.'}
@@ -400,6 +426,33 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               <button className="dbtn" onClick={() => nudge(STEP, 'move')} disabled={!selDraggable} aria-label="15 Minuten später">15 Min ▸</button>
               <button className="dbtn" onClick={() => nudge(-STEP, 'r')} disabled={!selDraggable}>Ende −15</button>
               <button className="dbtn" onClick={() => nudge(STEP, 'r')} disabled={!selDraggable}>Ende +15</button>
+              {selEditable && EDIT_TYPES.includes(selBlock.type) && (
+                <label className="dsel">
+                  <span className="visually-hidden">Art</span>
+                  <select
+                    value={selBlock.type}
+                    aria-label="Art des Zeitfensters"
+                    onChange={(e) => setSelDay(setBlockType(selBlocks, selBlock.id, e.target.value as BlockType), selBlock.id)}
+                  >
+                    {EDIT_TYPES.map((ty) => (
+                      <option key={ty} value={ty}>{TYPE_LABEL[ty]}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {canPauseHere && (
+                <button className="dbtn" onClick={onInsertPause} title="Teilt das Zeitfenster; die Pause lässt sich danach entlang der Zeitleiste ziehen">
+                  Pause einziehen ({fmtDuration(pauseLen)} h)
+                </button>
+              )}
+              {effVariant === 'test' && hasRoomAfter && (
+                <button className="dbtn" onClick={onAddAfter}>+ Zeitfenster danach</button>
+              )}
+              {selEditable && (
+                <button className="dbtn" onClick={() => setSelDay(deleteBlock(selBlocks, selBlock.id), null)}>
+                  {selBlock.type === 'pause' ? 'Pause entfernen' : 'Löschen'}
+                </button>
+              )}
               {effVariant === 'test' && selBlock.verb === 'hart' && selBlock.unlocked && (
                 <button className="dbtn" onClick={() => dispatch({ type: 'setUnlocked', personId: selected.personId, day: selected.day, blockId: selBlock.id, unlocked: false })}>
                   Wieder sperren
@@ -413,7 +466,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
 
       <h2 className="h2">Was am {DAY_FULL[day]} auffällt</h2>
       <div className="findings">
-        {result.findings.map((f, i) => (
+        {lautFindings.map((f, i) => (
           <div className={`finding tone-${f.kind}`} key={i}>
             <span className="dot" />
             <div>
@@ -427,6 +480,27 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
           </div>
         ))}
       </div>
+
+      {leiseFindings.length > 0 && (
+        <div className="quiet-list">
+          <div className="quiet-head">
+            <strong>Abweichungen von der Normalarbeitszeit</strong>
+            <span>Erlaubt – nur zur Kontrolle, ob das so gewollt ist.</span>
+          </div>
+          <ul>
+            {leiseFindings.map((f, i) => {
+              const p = persons.find((x) => x.id === f.personId);
+              return (
+                <li key={i}>
+                  <span className="visually-hidden">Abweichung: </span>
+                  {p?.name ?? f.title}
+                  {actionsFor(f)}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {wochenFindings.length > 0 && (
         <>

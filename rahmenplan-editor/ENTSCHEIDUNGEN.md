@@ -19,6 +19,22 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Freie Bearbeitung in der Zeitleiste, leise Abweichungen (16.11.2026)
+
+- **Zeitfenster aufziehen:** In der Testfassung auf eine freie Stelle einer Zeile ziehen → neuer Block (Betreuung, weich),
+  begrenzt auf die Lücke zwischen den Nachbarn. Ein Klick ohne Ziehen legt nichts an (verhindert Versehen).
+  Freie Tage zeigen zusätzlich „+ Zeitfenster“ (4 h ab Dienstbeginn laut Profil); per Tastatur „+ Zeitfenster danach“ in der Auswahlleiste.
+- **Pause einziehen:** Auswahlleiste → „Pause einziehen“ teilt den gewählten Betreuungs-/Verfügungsblock mittig.
+  Länge: gesetzlich fehlende Pause, sonst Pausenwunsch aus dem Profil, sonst 30 Minuten. Danach lässt sich die Pause
+  entlang der Zeitleiste ziehen; die Nachbarblöcke wandern mit (Arbeitszeit bleibt gleich).
+- **Art ändern:** Betreuung / Verfügungszeit / Pause. Besprechung und Anleitung kommen bewusst nur über Termine.
+- **Löschen** (Knopf oder `Entf`): Eine entfernte Pause zwischen zwei gleichartigen Blöcken wird wieder durchgehende
+  Arbeitszeit; andere Blöcke hinterlassen eine Lücke. Gesperrte harte Zeiten und Termin-Blöcke sind nicht löschbar.
+- **„Plan weicht von der Normalarbeitszeit ab“ ist jetzt ein leiser Hinweis:** zählt nicht in Tageskarte/Status,
+  steht kompakt unter den Befunden („Abweichungen von der Normalarbeitszeit“) und erscheint an der Person als
+  neutrales „≠“ statt gelbem „!“. Bleibt ein normaler Hinweis, wenn die Person an einem Arbeitstag gar nicht eingeplant ist.
+- Offen: Sollen leise Abweichungen im Übernehmen-Dialog mitgezählt werden? Rückgängig machen (Undo) fehlt weiterhin.
+
 ## Profiländerungen wirken auf den Plan (15.11.2026)
 
 - Speichern im Profil überträgt Änderungen an Arbeitstagen, Zeiten und Pausen automatisch in die **Testfassung**

@@ -28,8 +28,9 @@ Beim nächsten Start reicht „Weiter mit …“ – der Browser fragt dann einm
 - **Rahmenplan**: Zeitleiste je Tag, gruppiert nach Gruppen; Abdeckung je 15 Minuten; Status-Badge je Tag;
   Regelprüfung; Pausenstaffel; Wochenübersicht (Ist/Soll).
 - **Fassungen**: Geltender Plan (schreibgeschützt) + eine Testfassung. „Als geltend übernehmen“ ersetzt den geltenden Plan.
-- **Bearbeiten** (nur Testfassung, nur Betreuung/Verfügungszeit): Block ziehen, Ränder ziehen, 15-Minuten-Raster,
-  Nachbarregeln wie im Design-Handoff. Tastatur: `←/→` verschieben, `Alt+←/→` Beginn, `Umschalt+←/→` Ende, `Esc` Auswahl aufheben.
+- **Bearbeiten** (nur Testfassung): Block ziehen, Ränder ziehen, 15-Minuten-Raster, Nachbarregeln wie im Design-Handoff.
+  Neues Zeitfenster durch Ziehen auf eine freie Stelle der Zeile; Auswahlleiste: Art ändern, Pause einziehen, Zeitfenster danach, Löschen.
+  Tastatur: `←/→` verschieben, `Alt+←/→` Beginn, `Umschalt+←/→` Ende, `Entf` löschen, `Esc` Auswahl aufheben.
 - **Harte Zeiten** (im Profil „hart“): gesperrt, in der Testfassung bewusst entsperrbar; eine Abweichung bleibt als Hinweis stehen.
 - **Personal**: Profile mit Qualifikation, Fachkraft-Status, Gruppe, Soll-Stunden, Arbeitstagen, Normalarbeitszeiten,
   Dienstag-Sonderfall, Praxisanleitung, Bemerkungen. Personen anlegen/entfernen.

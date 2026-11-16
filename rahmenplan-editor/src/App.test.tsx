@@ -159,13 +159,46 @@ describe('App (Smoke)', () => {
     d.plans.test = { since: '', blocks: { a: { Mo: [block(7, 16.5)] } } };
     renderApp(d);
     fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
-    fireEvent.click(screen.getByRole('button', { name: /^Anna: 2 Verstöße, 2 Hinweise anzeigen$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Anna: 2 Verstöße, 1 Hinweis, weicht von der Normalzeit ab – anzeigen$/ }));
     const pop = screen.getByRole('dialog', { name: 'Probleme bei Anna' });
     expect(within(pop).getByText(/Pflichtpause fehlt/)).toBeTruthy();
     fireEvent.click(within(pop).getAllByRole('button', { name: 'Pause einfügen' })[0]);
     expect(screen.getByRole('button', { name: /^Anna, Pause, 11:30 bis 12:00/ })).toBeTruthy();
     // Pflichtpause und „am Stück“ behoben, Abweichung weg; übrig bleibt der Hinweis „über 8 h“
-    expect(screen.getByRole('button', { name: 'Anna: 1 Hinweis anzeigen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Anna: 1 Hinweis – anzeigen' })).toBeTruthy();
+  });
+
+  it('Zeile frei bearbeiten: Pause einziehen, Art ändern, Zeitfenster dazu, löschen', () => {
+    const d = emptyData();
+    const block = (start: number, end: number) => ({ id: `b${start}`, start, end, type: 'betreuung' as const, verb: 'weich' as const });
+    d.persons = [{ id: 'a', name: 'Anna', qual: 'Erzieherin', fk: true, groupId: 'g1', soll: 20, workdays: ['Mo'], normBlocks: [block(8, 12)], mentorId: '', notiz: '' }];
+    d.plans.test = { since: '', blocks: { a: { Mo: [block(8, 12)] } } };
+    renderApp(d);
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    fireEvent.focus(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Pause einziehen/ }));
+    // Pause ist ausgewählt und lässt sich per Tastatur entlang der Zeitleiste schieben
+    const pause = screen.getByRole('button', { name: /^Anna, Pause, 09:45 bis 10:15/ });
+    fireEvent.keyDown(pause, { key: 'ArrowRight' });
+    expect(screen.getByRole('button', { name: /^Anna, Pause, 10:00 bis 10:30/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 10:00/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Anna, Betreuung, 10:30 bis 12:00/ })).toBeTruthy();
+    // Abweichung von der Normalzeit ist nur ein leiser Hinweis
+    expect(screen.queryByText(/Plan weicht von der Normalarbeitszeit ab/)).toBeNull();
+    expect(screen.getByText('Abweichungen von der Normalarbeitszeit')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Anna: weicht von der Normalzeit ab – anzeigen' })).toBeTruthy();
+    // Pause entfernen → wieder durchgehend
+    fireEvent.keyDown(screen.getByRole('button', { name: /^Anna, Pause/ }), { key: 'Delete' });
+    expect(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ })).toBeTruthy();
+    // zweites Zeitfenster dazu und auf Verfügungszeit umstellen
+    fireEvent.focus(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Zeitfenster danach' }));
+    expect(screen.getByRole('button', { name: /^Anna, Betreuung, 12:00 bis 14:00/ })).toBeTruthy();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Art des Zeitfensters' }), { target: { value: 'verfuegung' } });
+    expect(screen.getByRole('button', { name: /^Anna, Verfügungszeit, 12:00 bis 14:00/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(screen.queryByRole('button', { name: /^Anna, Verfügungszeit/ })).toBeNull();
+    expect(screen.queryByText('Abweichungen von der Normalarbeitszeit')).toBeNull();
   });
 
   it('Korrektur „arbeitet montags nicht“: Testfassung und auf Wunsch auch geltender Plan', () => {

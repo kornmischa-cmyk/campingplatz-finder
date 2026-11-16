@@ -27,6 +27,8 @@ export interface Finding {
   canResetFromProfile?: boolean;
   /** Fehlende Pause lässt sich automatisch einfügen */
   canInsertPause?: boolean;
+  /** Leiser Hinweis (bewusste Abweichung von der Normalzeit): zählt nicht als Hinweis, nur zur Kontrolle */
+  quiet?: boolean;
 }
 
 export interface Span {
@@ -108,7 +110,7 @@ export interface DayResult {
   slots: Slot[];
   findings: Finding[];
   violationSpans: (Span & { label: string })[];
-  counts: { v: number; h: number };
+  counts: { v: number; h: number; i: number };
 }
 
 export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: Settings, termine: Termin[] = []): DayResult {
@@ -207,6 +209,8 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
         kind: 'h',
         personId: p.id,
         canResetFromProfile: true,
+        // Geänderte Zeiten sind erlaubt und oft gewollt → leise; nicht eingeplant zu sein bleibt ein echter Hinweis
+        quiet: bl.length > 0 || undefined,
         title: `${p.name}: Plan weicht von der Normalarbeitszeit ab`,
         desc: bl.length
           ? 'Die Zeiten im Plan entsprechen nicht den Normalarbeitszeiten aus dem Personalprofil.'
@@ -224,8 +228,13 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
     });
   }
 
-  const counts = { v: L.filter((f) => f.kind === 'v').length, h: L.filter((f) => f.kind === 'h').length };
-  if (!L.length) L.push({ kind: 'ok', title: 'Keine Verstöße', desc: 'Alle hinterlegten Regeln sind für diesen Tag erfüllt.' });
+  const counts = {
+    v: L.filter((f) => f.kind === 'v').length,
+    h: L.filter((f) => f.kind === 'h' && !f.quiet).length,
+    /** leise Hinweise (Abweichung von der Normalzeit) */
+    i: L.filter((f) => f.quiet).length,
+  };
+  if (!L.some((f) => !f.quiet)) L.unshift({ kind: 'ok', title: 'Keine Verstöße', desc: 'Alle hinterlegten Regeln sind für diesen Tag erfüllt.' });
 
   const violationSpans = [
     ...fkSpans.map((s) => ({ ...s, label: fkWord })),

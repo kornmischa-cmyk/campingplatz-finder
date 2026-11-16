@@ -5,7 +5,8 @@ import { applyDrag, canDrag, isLocked, planDrag, pxToDelta, type DragMode, type 
 import { blocksOf } from '../domain/plan';
 import type { DayResult, Finding } from '../domain/rules';
 import { workHours } from '../domain/rules';
-import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP } from '../domain/time';
+import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
+import { addBlockAfter, canEdit, deleteBlock, drawBlock, gapAt } from '../domain/edit';
 import type { Action } from '../state/store';
 import { LockIcon } from './Icons';
 import { groupColor, groupedPersons, initials } from '../domain/groups';
@@ -40,6 +41,18 @@ interface DragState {
   start: Block[];
   plan: DragPlan;
   last: number;
+}
+
+/** Neues Zeitfenster aufziehen */
+interface DrawState {
+  personId: string;
+  laneLeft: number;
+  width: number;
+  anchor: number;
+  gap: { lo: number; hi: number };
+  start: Block[];
+  id: string;
+  created: boolean;
 }
 
 const CH = 7; // ca. Pixel pro Zeichen bei 12px Schrift
@@ -114,6 +127,47 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
     // nur beim Start/Ende eines Drags neu binden
   }, [drag !== null]);
 
+  const [draw, setDraw] = useState<DrawState | null>(null);
+  const drawRef = useRef<DrawState | null>(null);
+  drawRef.current = draw;
+  const hourAt = (clientX: number, left: number, width: number) => open + ((clientX - left) / width) * span;
+
+  useEffect(() => {
+    if (!draw) return;
+    const onMove = (e: PointerEvent) => {
+      const d = drawRef.current;
+      if (!d) return;
+      const next = drawBlock(d.start, d.anchor, hourAt(e.clientX, d.laneLeft, d.width), d.gap, d.id);
+      d.created = next !== d.start;
+      dispatch({ type: 'setTestDay', personId: d.personId, day, blocks: next });
+    };
+    const onUp = () => {
+      const d = drawRef.current;
+      if (d?.created) onSelect({ personId: d.personId, day, blockId: d.id });
+      setDraw(null);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [draw !== null]);
+
+  const startDraw = (e: RPointerEvent<HTMLDivElement>, personId: string, blocks: Block[]) => {
+    if (e.target !== e.currentTarget || e.button !== 0) return;
+    onSelect(null);
+    if (variant !== 'test') return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const h = hourAt(e.clientX, r.left, r.width);
+    const gap = gapAt(blocks, h, open, close);
+    if (!gap) return;
+    e.preventDefault();
+    setDraw({ personId, laneLeft: r.left, width: r.width, anchor: h, gap, start: blocks, id: uid('b'), created: false });
+  };
+
   const startDrag = (e: RPointerEvent, personId: string, blocks: Block[], idx: number, mode: DragMode, blockEl: HTMLElement) => {
     e.stopPropagation();
     e.preventDefault();
@@ -135,6 +189,12 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
     if (e.key === 'Escape') {
       onSelect(null);
       (e.currentTarget as HTMLElement).blur();
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && canEdit(blocks[idx], variant)) {
+      e.preventDefault();
+      dispatch({ type: 'setTestDay', personId, day, blocks: deleteBlock(blocks, blocks[idx].id) });
+      onSelect(null);
       return;
     }
     if (e.key === 'Enter' || e.key === ' ') {
@@ -214,17 +274,23 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           const fs = personFindings[p.id] ?? [];
                           if (!fs.length) return null;
                           const nv = fs.filter((f) => f.kind === 'v').length;
-                          const nh = fs.length - nv;
-                          const label = `${p.name}: ${nv ? `${nv} ${nv === 1 ? 'Verstoß' : 'Verstöße'}` : ''}${nv && nh ? ', ' : ''}${nh ? `${nh} ${nh === 1 ? 'Hinweis' : 'Hinweise'}` : ''} anzeigen`;
+                          const nq = fs.filter((f) => f.quiet).length;
+                          const nh = fs.length - nv - nq;
+                          const parts = [
+                            nv ? `${nv} ${nv === 1 ? 'Verstoß' : 'Verstöße'}` : '',
+                            nh ? `${nh} ${nh === 1 ? 'Hinweis' : 'Hinweise'}` : '',
+                            nq ? 'weicht von der Normalzeit ab' : '',
+                          ].filter(Boolean);
+                          const label = `${p.name}: ${parts.join(', ')} – anzeigen`;
                           return (
                             <button
-                              className={`p-badge tone-${nv ? 'v' : 'h'}`}
+                              className={`p-badge tone-${nv ? 'v' : nh ? 'h' : 'i'}`}
                               aria-label={label}
                               title={label}
                               aria-expanded={openBadge === p.id}
                               onClick={() => setOpenBadge(openBadge === p.id ? null : p.id)}
                             >
-                              {nv ? nv : '!'}
+                              {nv ? nv : nh ? '!' : '≠'}
                             </button>
                           );
                         })()}
@@ -236,7 +302,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                         <strong>{p.name}</strong>
                         <ul>
                           {(personFindings[p.id] ?? []).map((f, i) => (
-                            <li key={i} className={`tone-${f.kind}`}>
+                            <li key={i} className={`tone-${f.quiet ? 'i' : f.kind}`}>
                               <span className="dot" />
                               <span>
                                 {f.title.replace(`${p.name}: `, '')}
@@ -249,12 +315,33 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                       </div>
                     )}
                   </div>
-                  <div className="lane" style={{ background: `repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${100 / span}%)` }}>
+                  <div
+                    className={`lane${variant === 'test' ? ' editable' : ''}`}
+                    title={variant === 'test' ? 'In eine freie Stelle ziehen, um ein Zeitfenster anzulegen' : undefined}
+                    style={{ background: `repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${100 / span}%)` }}
+                    onPointerDown={(e) => startDraw(e, p.id, blocks)}
+                  >
+                    {variant === 'test' && !blocks.length && draw?.personId !== p.id && (
+                      <button
+                        className="lane-add"
+                        onClick={() => {
+                          const id = uid('b');
+                          const from = p.normBlocks.length ? Math.min(...p.normBlocks.map((b) => b.start)) : open;
+                          const next = addBlockAfter([], from, open, close, id, 4);
+                          if (!next) return;
+                          dispatch({ type: 'setTestDay', personId: p.id, day, blocks: next });
+                          onSelect({ personId: p.id, day, blockId: id });
+                        }}
+                      >
+                        + Zeitfenster
+                      </button>
+                    )}
                     {blocks.map((b, idx) => {
                       const draggable = canDrag(b, variant);
+                      const editable = canEdit(b, variant);
                       const locked = isLocked(b);
                       const hardLockedInTest = variant === 'test' && locked && (b.type === 'betreuung' || b.type === 'verfuegung');
-                      const focusable = draggable || hardLockedInTest;
+                      const focusable = draggable || editable || hardLockedInTest;
                       const isSel = selected?.personId === p.id && selected.day === day && selected.blockId === b.id;
                       const isDrag = drag?.personId === p.id && drag.blockId === b.id;
                       const dur = b.end - b.start;
@@ -264,6 +351,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                       const aria =
                         `${p.name}, ${TYPE_LABEL[b.type]}, ${fmt(b.start)} bis ${fmt(b.end)}${hartText}` +
                         (draggable ? '. Pfeiltasten verschieben, Alt plus Pfeil ändert Beginn, Umschalt plus Pfeil ändert Ende.' : '') +
+                        (editable ? ' Entf löscht.' : '') +
                         (hardLockedInTest ? '. Zum Entsperren auswählen.' : '');
                       const cls = ['blk', `t-${b.type}`, draggable && 'draggable', isSel && 'selected', isDrag && 'dragging'].filter(Boolean).join(' ');
                       return (
