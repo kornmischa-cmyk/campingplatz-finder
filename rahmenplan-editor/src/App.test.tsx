@@ -33,7 +33,7 @@ describe('App (Smoke)', () => {
     renderApp();
     expect(screen.getByRole('heading', { name: 'Rahmenplan', level: 1 })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Testfassung' }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('button', { name: /^Di: 3 Verstöße/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Di: 3 Probleme/ })).toBeTruthy();
     fireEvent.keyDown(screen.getByRole('button', { name: /^Tina, Betreuung, 07:00 bis 10:00/ }), { key: 'ArrowRight' });
     await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).toContain('"start": 7.25'), { timeout: 2000 });
   });
@@ -41,7 +41,7 @@ describe('App (Smoke)', () => {
   it('Geltender Plan ist schreibgeschützt, Testfassung per Tastatur verschiebbar', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'Geltender Plan' }));
-    expect(screen.getByRole('button', { name: /^Di: 5 Verstöße/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Di: 5 Probleme/ })).toBeTruthy();
     expect(screen.queryAllByRole('button', { name: /^Tina, Betreuung/ })).toHaveLength(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Testfassung' }));
@@ -159,7 +159,7 @@ describe('App (Smoke)', () => {
     d.plans.test = { since: '', blocks: { a: { Mo: [block(7, 16.5)] } } };
     renderApp(d);
     fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
-    fireEvent.click(screen.getByRole('button', { name: /^Anna: 2 Verstöße, 1 Hinweis, weicht von der Normalzeit ab – anzeigen$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Anna: 2 Probleme, 1 Hinweis, weicht von der Normalzeit ab – anzeigen$/ }));
     const pop = screen.getByRole('dialog', { name: 'Probleme bei Anna' });
     expect(within(pop).getByText(/Pflichtpause fehlt/)).toBeTruthy();
     fireEvent.click(within(pop).getAllByRole('button', { name: 'Pause einfügen' })[0]);
@@ -176,10 +176,10 @@ describe('App (Smoke)', () => {
     renderApp(d);
     fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
     // Wochenzähler an der Person läuft mit
-    expect(screen.getByText(/Woche 4,00 von 20,00 h verplant, noch 16,00 Stunden offen/)).toBeTruthy();
+    expect(screen.getByText(/Woche 4 von 20 h verplant, noch 16:00 Stunden offen/)).toBeTruthy();
     fireEvent.focus(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ }));
-    fireEvent.click(screen.getByRole('button', { name: /^Pause einziehen/ }));
-    expect(screen.getByText(/Woche 3,50 von 20,00 h verplant/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Pause einfügen \(/ }));
+    expect(screen.getByText(/Woche 3:30 von 20 h verplant/)).toBeTruthy();
     // Pause ist ausgewählt und lässt sich per Tastatur entlang der Zeitleiste schieben
     const pause = screen.getByRole('button', { name: /^Anna, Pause, 09:45 bis 10:15/ });
     fireEvent.keyDown(pause, { key: 'ArrowRight' });
@@ -199,7 +199,7 @@ describe('App (Smoke)', () => {
     expect(screen.getByRole('button', { name: /^Anna, Betreuung, 12:00 bis 14:00/ })).toBeTruthy();
     fireEvent.change(screen.getByRole('combobox', { name: 'Art des Zeitfensters' }), { target: { value: 'verfuegung' } });
     expect(screen.getByRole('button', { name: /^Anna, Verfügungszeit, 12:00 bis 14:00/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }));
     expect(screen.queryByRole('button', { name: /^Anna, Verfügungszeit/ })).toBeNull();
     expect(screen.queryByText('Abweichungen von der Normalarbeitszeit')).toBeNull();
   });
@@ -223,6 +223,20 @@ describe('App (Smoke)', () => {
     d.plans.test = { since: '', blocks: { a: { Mo: [block(8, 12)] } } };
     renderApp(d);
     expect(screen.getByText(/noch nicht eingeplant: Mi/)).toBeTruthy();
+  });
+
+  it('Übernehmen warnt bei Problemen, zeigt Änderungen und lässt sich rückgängig machen', () => {
+    renderApp();
+    fireEvent.keyDown(screen.getByRole('button', { name: /^Tina, Betreuung, 07:00 bis 10:00/ }), { key: 'ArrowRight' });
+    fireEvent.click(screen.getByRole('button', { name: 'Als geltend übernehmen' }));
+    const dlg = screen.getByRole('dialog');
+    expect(within(dlg).getByText(/^Tina: /)).toBeTruthy();
+    expect(within(dlg).getByRole('button', { name: 'Vorher Sicherung herunterladen' })).toBeTruthy();
+    fireEvent.click(within(dlg).getByRole('button', { name: /^Trotz \d+ Problemen übernehmen$/ }));
+    expect(screen.getByRole('button', { name: 'Geltender Plan' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Testfassung' })).toBeNull();
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Testfassung' })).toBeTruthy();
   });
 
   it('Korrektur „arbeitet montags nicht“: Testfassung und auf Wunsch auch geltender Plan', () => {

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { ChevronDown, ChevronUp } from './Icons';
 import type { AppData, Group, Settings } from '../domain/types';
 import { fmt, STEP, uid } from '../domain/time';
 import type { Action } from '../state/store';
@@ -84,8 +85,8 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
               <input className="input num" type="number" min={0} aria-label={`Gruppe ${i + 1}, Anzahl Kinder`} value={g.kinder} onChange={(e) => upd({ kinder: Math.max(0, Math.round(num(e.target.value))) })} />
               <span className="hint">Kinder</span>
               <input className="input" style={{ width: 90 }} aria-label={`Gruppe ${i + 1}, Alter`} placeholder="z. B. 3–6 J." value={g.alter} onChange={(e) => upd({ alter: e.target.value })} />
-              <button className="linkbtn" disabled={i === 0} onClick={() => move(-1)} aria-label={`Gruppe ${g.name} nach oben`}>↑</button>
-              <button className="linkbtn" disabled={i === data.groups.length - 1} onClick={() => move(1)} aria-label={`Gruppe ${g.name} nach unten`}>↓</button>
+              <button className="icon-btn" disabled={i === 0} onClick={() => move(-1)} aria-label={`Gruppe ${g.name} nach oben`} title="Nach oben"><ChevronUp /></button>
+              <button className="icon-btn" disabled={i === data.groups.length - 1} onClick={() => move(1)} aria-label={`Gruppe ${g.name} nach unten`} title="Nach unten"><ChevronDown /></button>
               <button
                 className="linkbtn danger"
                 disabled={members > 0}

@@ -131,27 +131,41 @@ function TerminForm({ data, initial, onSave, onCancel }: { data: AppData; initia
 
 export function TermineCard({ data, day, dispatch, confirm, onApplied }: Props) {
   const [editing, setEditing] = useState<Termin | null>(null);
+  const [open, setOpen] = useState(false);
   const heute = data.termine.filter((t) => t.day === day).sort((a, b) => a.start - b.start);
   const neu = (): Termin => ({ id: uid('t'), name: '', type: 'besprechung', day, start: 14, end: 15, teilnehmer: 'alle' });
+  const listId = useId();
 
   return (
-    <section className="card termine" aria-labelledby="termine-title">
-      <div className="termine-head">
-        <h2 id="termine-title">Termine am {DAY_FULL[day]}</h2>
+    <section className="termine-strip" aria-labelledby={`${listId}-t`}>
+      <div className="termine-row">
+        <h3 id={`${listId}-t`}>Termine am {DAY_FULL[day]}</h3>
+        {heute.length === 0 ? (
+          <span className="hint">keine – z. B. Dienstbesprechung für alle oder ein Anleitergespräch</span>
+        ) : (
+          <ul className="termin-chips">
+            {heute.map((t) => (
+              <li key={t.id} title={`${t.name} · ${fmt(t.start)}–${fmt(t.end)} · ${teilnehmerText(t, data)}`}>
+                <i className={`sw t-${t.type}`} aria-hidden="true" />
+                <span className="termin-time">{fmt(t.start)}</span> {t.name}
+              </li>
+            ))}
+          </ul>
+        )}
+        <span className="spacer" />
+        {heute.length > 0 && !editing && (
+          <button className="linkbtn" aria-expanded={open} aria-controls={`${listId}-l`} onClick={() => setOpen(!open)}>
+            {open ? 'Einklappen' : 'Bearbeiten'}
+          </button>
+        )}
         {!editing && (
           <button className="pill sm" onClick={() => setEditing(neu())}>
             + Termin
           </button>
         )}
       </div>
-      {!editing && heute.length === 0 && (
-        <p className="hint" style={{ margin: 0 }}>
-          Keine Termine. Hier gehören z. B. Dienstbesprechungen (für alle, die an dem Tag arbeiten) oder Anleitergespräche (für ausgewählte Personen)
-          hin.
-        </p>
-      )}
-      {!editing && heute.length > 0 && (
-        <ul className="termin-list">
+      {open && !editing && heute.length > 0 && (
+        <ul className="termin-list" id={`${listId}-l`}>
           {heute.map((t) => (
             <li key={t.id}>
               <i className={`sw t-${t.type}`} aria-hidden="true" />

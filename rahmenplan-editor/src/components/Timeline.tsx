@@ -5,11 +5,18 @@ import { applyDrag, canDrag, isLocked, planDrag, pxToDelta, type DragMode, type 
 import { blocksOf } from '../domain/plan';
 import type { DayResult, Finding } from '../domain/rules';
 import { workHours } from '../domain/rules';
-import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
+import { fmt, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
+import { fmtHours, fmtSollDiff } from '../domain/soll';
 import { addBlockAfter, canEdit, deleteBlock, drawBlock, gapAt } from '../domain/edit';
 import type { Action } from '../state/store';
 import { LockIcon } from './Icons';
 import { groupColor, groupedPersons, initials } from '../domain/groups';
+
+/** Kurz hervorgehobene Stelle („Im Plan zeigen“) */
+export interface Flash {
+  personId?: string;
+  span?: { start: number; end: number };
+}
 
 export interface Selection {
   personId: string;
@@ -32,6 +39,7 @@ interface Props {
   renderActions: (f: Finding) => ReactNode;
   /** Klick auf einen Wochentag-Punkt am Zähler */
   onDay?: (d: Day) => void;
+  flash?: Flash | null;
 }
 
 interface DragState {
@@ -57,6 +65,17 @@ interface DrawState {
   created: boolean;
 }
 
+/** Überlappende Zeiträume zusammenfassen (für die rote Fläche über alle Zeilen) */
+function mergeSpans(spans: { start: number; end: number }[]): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  for (const x of [...spans].sort((a, b) => a.start - b.start)) {
+    const last = out[out.length - 1];
+    if (last && x.start <= last.end + 1e-9) last.end = Math.max(last.end, x.end);
+    else out.push({ start: x.start, end: x.end });
+  }
+  return out;
+}
+
 const CH = 7; // ca. Pixel pro Zeichen bei 12px Schrift
 
 /** Beschriftung abhängig von der verfügbaren Pixelbreite; Pausen ohne Kurzbeschriftung */
@@ -69,7 +88,7 @@ function blockLabel(b: Block, px: number): string {
   return b.type !== 'pause' && px >= s.length * CH ? s : '';
 }
 
-export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay }: Props) {
+export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay, flash }: Props) {
   const [openBadge, setOpenBadge] = useState<string | null>(null);
   useEffect(() => {
     if (!openBadge) return;
@@ -215,12 +234,21 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
   const ticks: number[] = [];
   for (let h = Math.ceil(open); h <= close; h++) ticks.push(h);
   if (ticks[0] !== open) ticks.unshift(open);
-  if (ticks[ticks.length - 1] !== close) ticks.push(close);
+  if (ticks[ticks.length - 1] !== close) {
+    // Volle Stunde direkt vor dem Schluss weglassen, wenn die Beschriftungen sonst kollidieren
+    const pxPerH = laneW / span;
+    if ((close - ticks[ticks.length - 1]) * pxPerH < 46) ticks.pop();
+    ticks.push(close);
+  }
 
   return (
     <>
       <div className="row">
-        <div />
+        <div className="tl-legend" aria-hidden="true">
+          <span><i className="wd wd-plan" /> geplant</span>
+          <span><i className="wd wd-missing" /> fehlt</span>
+          <span><i className="wd wd-off" /> frei</span>
+        </div>
         <div className="ticks" ref={measureRef} aria-hidden="true">
           {ticks.map((h) => (
             <span key={h} style={{ left: `${pct(h)}%` }}>
@@ -229,7 +257,37 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
           ))}
         </div>
       </div>
+      {result.violationSpans.length > 0 && (
+        <div className="row vrow">
+          <div className="vrow-label">Unterbesetzt</div>
+          <div className="vstripe">
+            {result.violationSpans.map((s, i) => {
+              const hl = flash?.span && flash.span.start < s.end && flash.span.end > s.start;
+              return (
+                <div
+                  key={i}
+                  className={hl ? 'flash' : undefined}
+                  style={{ left: `${pct(s.start)}%`, width: `${((s.end - s.start) / span) * 100}%` }}
+                  title={`${s.label} · ${fmt(s.start)}–${fmt(s.end)}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
 
+      <div className="tl-body">
+      {mergeSpans(result.violationSpans).map((s, i) => (
+        <div
+          key={i}
+          className={`vband${flash?.span && flash.span.start < s.end && flash.span.end > s.start ? ' flash' : ''}`}
+          aria-hidden="true"
+          style={{
+            left: `calc(var(--label-w) + (100% - var(--label-w)) * ${pct(s.start) / 100})`,
+            width: `calc((100% - var(--label-w)) * ${(s.end - s.start) / span})`,
+          }}
+        />
+      ))}
       {groupedPersons(data).map(({ group: g, members }) => {
         if (!members.length && g.id === '__ohne') return null;
         const gc = groupColor(data.groups, g.id);
@@ -242,14 +300,6 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                 {[g.kinder ? `${g.kinder} Kinder` : '', g.alter].filter(Boolean).join(', ')}
               </span>
             </div>
-            <div className="row">
-              <div />
-              <div className="vstripe">
-                {result.violationSpans.map((s, i) => (
-                  <div key={i} style={{ left: `${pct(s.start)}%`, width: `${((s.end - s.start) / span) * 100}%` }} title={`${s.label} · ${fmt(s.start)}–${fmt(s.end)}`} />
-                ))}
-              </div>
-            </div>
             {members.length === 0 && (
               <div className="person-row empty-group">
                 <div className="person-cell hint">Noch niemand in dieser Gruppe</div>
@@ -260,33 +310,25 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
               const blocks = blocksOf(plan, p.id, day);
               const az = workHours(blocks);
               const ist = DAYS.reduce((a, d) => a + workHours(blocksOf(plan, p.id, d)), 0);
-              const diff = ist - p.soll;
-              const sollTone = Math.abs(diff) < 0.01 ? 'ok' : diff > 0 ? 'over' : 'under';
-              const diffText = sollTone === 'ok' ? '✓' : `${diff > 0 ? '+' : '−'}${fmtDecimal(Math.abs(diff), 2)}`;
-              const sollSpoken =
-                sollTone === 'ok'
-                  ? 'Soll erreicht'
-                  : diff > 0
-                    ? `${fmtDecimal(diff, 2)} Stunden über Soll`
-                    : `noch ${fmtDecimal(-diff, 2)} Stunden offen`;
+              const sd = fmtSollDiff(ist, p.soll);
               const week = DAYS.map((d) => {
                 const bl = blocksOf(plan, p.id, d);
                 const soll = p.workdays.includes(d);
                 const state = bl.length ? (soll ? 'plan' : 'extra') : soll ? 'missing' : 'off';
                 const text =
                   state === 'plan' || state === 'extra'
-                    ? `${d}: ${fmt(Math.min(...bl.map((b) => b.start)))}–${fmt(Math.max(...bl.map((b) => b.end)))}, ${fmtDecimal(workHours(bl))} h${state === 'extra' ? ' (laut Profil kein Arbeitstag)' : ''}`
+                    ? `${d}: ${fmt(Math.min(...bl.map((b) => b.start)))}–${fmt(Math.max(...bl.map((b) => b.end)))}, ${fmtDuration(workHours(bl))} h${state === 'extra' ? ' (laut Profil kein Arbeitstag)' : ''}`
                     : state === 'missing'
                       ? `${d}: Arbeitstag, noch nicht eingeplant`
                       : `${d}: frei`;
                 return { d, state, text };
               });
               const missingDays = week.filter((w) => w.state === 'missing').map((w) => w.d);
-              const meta = `${p.qual} · heute ${blocks.length ? `${fmtDecimal(az)} h` : 'frei'} · Woche ${fmtDecimal(ist, 2)} von ${fmtDecimal(p.soll, 2)} h verplant, ${sollSpoken}${missingDays.length ? ` · noch nicht eingeplant: ${missingDays.join(', ')}` : ''}`;
+              const meta = `${p.qual} · heute ${blocks.length ? `${fmtDuration(az)} h` : 'frei'} · Woche ${fmtHours(ist)} von ${fmtHours(p.soll)} h verplant, ${sd.spoken}${missingDays.length ? ` · noch nicht eingeplant: ${missingDays.join(', ')}` : ''}`;
               return (
-                <div className="person-row" key={p.id}>
+                <div className={`person-row${flash?.personId === p.id ? ' flash' : ''}`} key={p.id} data-person-row={p.id}>
                   <div className="person-cell">
-                    <span className="avatar" aria-hidden="true" style={{ background: gc.s, color: gc.c }}>
+                    <span className="avatar" aria-hidden="true" style={{ background: gc.s, color: gc.t }}>
                       {initials(p.name)}
                     </span>
                     <div style={{ minWidth: 0 }}>
@@ -302,7 +344,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           const nq = fs.filter((f) => f.quiet).length;
                           const nh = fs.length - nv - nq;
                           const parts = [
-                            nv ? `${nv} ${nv === 1 ? 'Verstoß' : 'Verstöße'}` : '',
+                            nv ? `${nv} ${nv === 1 ? 'Problem' : 'Probleme'}` : '',
                             nh ? `${nh} ${nh === 1 ? 'Hinweis' : 'Hinweise'}` : '',
                             nq ? 'weicht von der Normalzeit ab' : '',
                           ].filter(Boolean);
@@ -320,7 +362,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           );
                         })()}
                       </div>
-                      <div className={`soll soll-${sollTone}`} title={meta}>
+                      <div className={`soll soll-${sd.tone}`} title={meta}>
                         <span className="soll-days" aria-hidden="true">
                           {week.map((w) => (
                             <span
@@ -332,9 +374,9 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           ))}
                         </span>
                         <span className="soll-num" aria-hidden="true">
-                          {fmtDecimal(ist, ist % 1 ? 2 : 0)} / {fmtDecimal(p.soll, p.soll % 1 ? 2 : 0)} h
+                          {fmtHours(ist)} / {fmtHours(p.soll)} h
                         </span>
-                        <span className="soll-diff" aria-hidden="true">{diffText}</span>
+                        <span className="soll-diff" aria-hidden="true">{sd.chip}</span>
                         <span className="visually-hidden">{meta}</span>
                       </div>
                     </div>
@@ -460,6 +502,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
           </section>
         );
       })}
+      </div>
     </>
   );
 }

@@ -65,7 +65,7 @@ export function PersonalView({ data, dispatch, onOpenProfile, onNewPerson }: Pro
             {members.map((p) => (
               <button key={p.id} className="person-card" onClick={(e) => onOpenProfile(p.id, e.currentTarget)}>
                 <span className="left">
-                  <span className="avatar" aria-hidden="true" style={{ background: gc.s, color: gc.c }}>{initials(p.name)}</span>
+                  <span className="avatar" aria-hidden="true" style={{ background: gc.s, color: gc.t }}>{initials(p.name)}</span>
                   <span>
                     <strong>{p.name}</strong>
                     <small>

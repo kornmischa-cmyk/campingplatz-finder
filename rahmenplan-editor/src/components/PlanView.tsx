@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AppData, Day, Variant } from '../domain/types';
 import { DAYS, TYPE_LABEL, type Block, type BlockType } from '../domain/types';
 import { evaluateDay, fkShort, totShort, weekTable, type DayResult, type Finding } from '../domain/rules';
-import { blocksOf, templateFor } from '../domain/plan';
+import { blocksOf, sameDay, templateFor } from '../domain/plan';
 import { applyDrag, canDrag, isLocked, planDrag, type DragMode } from '../domain/drag';
-import { fmt, fmtDecimal, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
+import { fmt, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
 import { addBlockAfter, canEdit, deleteBlock, EDIT_TYPES, insertPauseIn, setBlockType, suggestedPause } from '../domain/edit';
 import { missingCount, type Action } from '../state/store';
 import { dienstTage, dienstWochenFindings } from '../domain/dienste';
 import { fmtDate } from '../lib/download';
-import { Timeline, type Selection } from './Timeline';
+import { Timeline, type Flash, type Selection } from './Timeline';
+import { fmtHours, fmtSollDiff } from '../domain/soll';
 import type { ConfirmRequest } from './ConfirmDialog';
-import { LockIcon } from './Icons';
+import { ArrowDown, ChevronLeft, ChevronRight, LockIcon } from './Icons';
 import { TermineCard } from './TermineCard';
 import { groupColor } from '../domain/groups';
 
@@ -26,17 +27,25 @@ interface Props {
   confirm: (r: ConfirmRequest) => void;
   goTo: (view: 'personal' | 'settings') => void;
   notify: (msg: string) => void;
+  /** Sicherung herunterladen (vor dem Übernehmen) */
+  onBackup: () => void;
 }
 
 const DAY_FULL: Record<Day, string> = { Mo: 'Montag', Di: 'Dienstag', Mi: 'Mittwoch', Do: 'Donnerstag', Fr: 'Freitag' };
 
-export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onOpenProfile, confirm, goTo, notify }: Props) {
+export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onOpenProfile, confirm, goTo, notify, onBackup }: Props) {
   const { settings, persons } = data;
   const hasTest = !!data.plans.test;
   const effVariant: Variant = variant === 'test' && hasTest ? 'test' : 'geltend';
   const plan = effVariant === 'test' ? data.plans.test! : data.plans.geltend;
   const [selected, setSelected] = useState<Selection | null>(null);
   const [confirmUnlock, setConfirmUnlock] = useState(false);
+  const [flash, setFlash] = useState<Flash | null>(null);
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 2400);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   const results = useMemo(() => {
     const r = {} as Record<Day, DayResult>;
@@ -99,22 +108,51 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
     );
   };
 
+  /** Welche Personen/Tage unterscheiden sich zwischen Testfassung und geltendem Plan? */
+  const adoptChanges = () => {
+    const test = data.plans.test;
+    if (!test) return [];
+    return persons
+      .map((p) => ({ p, days: DAYS.filter((d) => !sameDay(blocksOf(test, p.id, d), blocksOf(data.plans.geltend, p.id, d))) }))
+      .filter((x) => x.days.length)
+      .map((x) => `${x.p.name}: ${x.days.join(', ')}`);
+  };
+
   const onAdopt = () => {
     const t = weekCounts('test');
     const g = weekCounts('geltend');
+    const ch = adoptChanges();
+    const probleme = (n: number) => `${n} ${n === 1 ? 'Problem' : 'Probleme'}`;
     confirm({
       title: 'Testfassung als geltend übernehmen?',
       body: (
         <>
-          <p>
-            Der bisher geltende Plan wird ersetzt. Eine Historie gibt es noch nicht. Wenn du den alten Stand behalten willst, exportiere vorher eine
-            Sicherung.
-          </p>
-          <p>
-            Woche geltend: <strong>{g.v} Verstöße</strong>, {g.h} Hinweise
-            <br />
-            Woche Testfassung: <strong>{t.v} Verstöße</strong>, {t.h} Hinweise
-          </p>
+          <p>Der bisher geltende Plan wird ersetzt. Direkt danach lässt sich das mit „Rückgängig“ (Strg+Z) zurücknehmen, nach dem Schließen der App nicht mehr.</p>
+          <table className="adopt-compare">
+            <tbody>
+              <tr>
+                <th scope="row">Bisher geltend</th>
+                <td>{probleme(g.v)}</td>
+                <td>{g.h} Hinweise</td>
+              </tr>
+              <tr className={t.v ? 'bad' : ''}>
+                <th scope="row">Testfassung</th>
+                <td>{probleme(t.v)}</td>
+                <td>{t.h} Hinweise</td>
+              </tr>
+            </tbody>
+          </table>
+          {ch.length > 0 ? (
+            <>
+              <p className="adopt-label">Was sich ändert ({ch.length === 1 ? '1 Person' : `${ch.length} Personen`})</p>
+              <ul className="adopt-changes">
+                {ch.slice(0, 8).map((x) => <li key={x}>{x}</li>)}
+                {ch.length > 8 && <li className="hint">und {ch.length - 8} weitere</li>}
+              </ul>
+            </>
+          ) : (
+            <p className="hint">Die Zeiten sind in beiden Fassungen gleich.</p>
+          )}
           {(t.i > 0 || t.soll > 0) && (
             <p className="hint">
               Zur Kontrolle (kein Problem):{' '}
@@ -127,13 +165,18 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               .
             </p>
           )}
+          <p className="adopt-backup">
+            <button type="button" className="pill sm" onClick={onBackup}>Vorher Sicherung herunterladen</button>
+          </p>
         </>
       ),
-      confirmLabel: 'Übernehmen',
+      confirmLabel: t.v ? `Trotz ${t.v === 1 ? '1 Problem' : `${t.v} Problemen`} übernehmen` : 'Übernehmen',
+      danger: t.v > 0,
       onConfirm: () => {
         dispatch({ type: 'adoptTest' });
         setVariant('geltend');
         select(null);
+        notify('Die Testfassung gilt jetzt. „Rückgängig“ (Strg+Z) nimmt das zurück.');
       },
     });
   };
@@ -159,21 +202,44 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
     for (const f of [...result.findings, ...wochenFindings]) if (f.personId) (m[f.personId] ??= []).push(f);
     return m;
   }, [result, wochenFindings]);
-  const actionsFor = (f: Finding) =>
-    f.personId && effVariant === 'test' && (f.canInsertPause || f.canResetFromProfile) ? (
+  const showInPlan = (f: Finding) => {
+    if (f.personId) {
+      setFlash({ personId: f.personId });
+      document.querySelector(`[data-person-row="${CSS.escape(f.personId)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (f.span) {
+      setFlash({ span: f.span });
+      document.querySelector('.plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  const actionsFor = (f: Finding, inPopover = false) => {
+    const fix = f.personId && effVariant === 'test';
+    const canShow = !inPopover && (f.personId || f.span);
+    if (!canShow && !(fix && (f.canInsertPause || f.canResetFromProfile))) return null;
+    return (
       <span className="finding-actions">
-        {f.canInsertPause && (
+        {fix && f.canInsertPause && (
           <button className="linkbtn" onClick={() => dispatch({ type: 'insertPause', personId: f.personId!, day })}>
             Pause einfügen
           </button>
         )}
-        {f.canResetFromProfile && (
+        {fix && f.canResetFromProfile && (
           <button className="linkbtn" onClick={() => dispatch({ type: 'resetDayFromProfile', personId: f.personId!, day })}>
             Normalzeit übernehmen
           </button>
         )}
+        {canShow && (
+          <button className="linkbtn muted" onClick={() => showInPlan(f)}>
+            Im Plan zeigen
+          </button>
+        )}
       </span>
-    ) : null;
+    );
+  };
+  const goFindings = () => {
+    const h = document.getElementById('befunde');
+    h?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    h?.focus({ preventScroll: true });
+  };
   const span = settings.close - settings.open;
   const pct = (h: number) => ((h - settings.open) / span) * 100;
   const randText = settings.randzeiten.map((r) => `${fmtShort(r.start)}–${fmtShort(r.end)} mind. ${r.minPersonen}`).join(', ');
@@ -184,12 +250,13 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
   const c = result.counts;
   const t = tone(c);
   const statusTitle = c.v ? statusShort(c) : c.h ? 'Keine Probleme' : 'Alles gut besetzt';
-  const abwText = c.i ? (c.i === 1 ? '1 Person weicht' : `${c.i} Personen weichen`) + ' bewusst von der Normalzeit ab.' : '';
-  const statusSub = c.v
-    ? 'Diese Punkte sollten gelöst sein, bevor der Plan gilt.'
-    : c.h
-      ? `${statusShort(c)} zum Prüfen – sonst ist alles in Ordnung.`
-      : `Alle Regeln für diesen Tag sind erfüllt.${abwText && ' ' + abwText}`;
+  const statusSub = [
+    c.v && c.h ? (c.h === 1 ? '1 Hinweis' : `${c.h} Hinweise`) : '',
+    !c.v && c.h ? (c.h === 1 ? '1 Hinweis zum Prüfen' : `${c.h} Hinweise zum Prüfen`) : '',
+    c.i ? (c.i === 1 ? '1 Abweichung von der Normalzeit' : `${c.i} Abweichungen von der Normalzeit`) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const lautFindings = result.findings.filter((f) => !f.quiet);
   const leiseFindings = result.findings.filter((f) => f.quiet);
 
@@ -215,7 +282,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
             Geltender Plan
           </button>
           {hasTest ? (
-            <button aria-pressed={effVariant === 'test'} onClick={() => setVariant('test')}>
+            <button aria-pressed={effVariant === 'test'} onClick={() => { setVariant('test'); select(null); }}>
               Testfassung
             </button>
           ) : (
@@ -231,17 +298,18 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
           )}
         </div>
         <div className="fassung-right">
-          <span className="muted">
-            {effVariant === 'geltend' ? `Gilt seit ${fmtDate(data.plans.geltend.since)} · Bearbeiten geht nur in der Testfassung` : 'Zeitfenster aufziehen, verschieben, Pausen einziehen'}
-          </span>
-          {hasTest && (
-            <button className="linkbtn danger" onClick={onDiscard}>
-              Testfassung verwerfen
-            </button>
+          {effVariant === 'geltend' ? (
+            <span className="muted">Gilt seit {fmtDate(data.plans.geltend.since)} · nur lesen – geändert wird in der Testfassung</span>
+          ) : (
+            <>
+              <button className="linkbtn danger" onClick={onDiscard}>
+                Testfassung verwerfen
+              </button>
+              <button className="cta" onClick={onAdopt}>
+                Als geltend übernehmen
+              </button>
+            </>
           )}
-          <button className="cta" onClick={onAdopt} disabled={effVariant !== 'test'}>
-            Als geltend übernehmen
-          </button>
         </div>
       </div>
 
@@ -295,7 +363,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
       <div className="days" role="group" aria-label="Wochentag">
         {DAYS.map((d) => {
           const dc = results[d].counts;
-          const aria = `${d}: ${dc.v ? dc.v + (dc.v === 1 ? ' Verstoß' : ' Verstöße') : 'keine Verstöße'}${dc.h ? ', ' + dc.h + (dc.h === 1 ? ' Hinweis' : ' Hinweise') : ''}`;
+          const aria = `${d}: ${dc.v ? dc.v + (dc.v === 1 ? ' Problem' : ' Probleme') : 'keine Probleme'}${dc.h ? ', ' + dc.h + (dc.h === 1 ? ' Hinweis' : ' Hinweise') : ''}`;
           return (
             <button key={d} className="day-card" aria-pressed={day === d} aria-label={aria} onClick={() => { setDay(d); select(null); }}>
               <span className="day-name">{DAY_FULL[d]}</span>
@@ -308,27 +376,40 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
         })}
       </div>
 
-      <div className={`status tone-${t}`} aria-live="polite">
-        <span className="status-num" aria-hidden="true">{c.v ? c.v : c.h ? '!' : '✓'}</span>
-        <div style={{ flex: '1 1 280px' }}>
-          <div className="status-kicker">{DAY_FULL[day]} · {variantLabel}</div>
-          <div className="status-title">{statusTitle}</div>
-          <div className="status-sub">{statusSub}</div>
+      <div className="card plan-card">
+        <div className="plan-toolbar">
+          {c.v || c.h ? (
+            <button type="button" className={`status-pill tone-${t}`} onClick={goFindings} aria-live="polite">
+              <span className="status-num" aria-hidden="true">{c.v ? c.v : '!'}</span>
+              <span className="status-text">
+                <strong>{statusTitle}</strong>
+                {statusSub && <span className="status-sub"> · {statusSub}</span>}
+              </span>
+              <span className="status-go">
+                Liste <ArrowDown />
+              </span>
+            </button>
+          ) : (
+            <div className={`status-pill tone-${t}`} aria-live="polite">
+              <span className="status-num" aria-hidden="true">✓</span>
+              <span className="status-text">
+                <strong>{statusTitle}</strong>
+                {statusSub && <span className="status-sub"> · {statusSub}</span>}
+              </span>
+            </div>
+          )}
+          <span className="plan-where">{DAY_FULL[day]} · {variantLabel}</span>
         </div>
-      </div>
-
-      <TermineCard
-        data={data}
-        day={day}
-        dispatch={dispatch}
-        confirm={confirm}
-        onApplied={(msg) => {
-          setVariant('test');
-          notify(msg);
-        }}
-      />
-
-      <div className="card">
+        <TermineCard
+          data={data}
+          day={day}
+          dispatch={dispatch}
+          confirm={confirm}
+          onApplied={(msg) => {
+            setVariant('test');
+            notify(msg);
+          }}
+        />
         <div className="scroll-x">
           <div className="tl-inner">
             <Timeline
@@ -342,7 +423,8 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               dispatch={dispatch}
               onOpenProfile={onOpenProfile}
               personFindings={personFindings}
-              renderActions={actionsFor}
+              renderActions={(f) => actionsFor(f, true)}
+              flash={flash}
               onDay={(d) => {
                 setDay(d);
                 select(null);
@@ -370,7 +452,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                 </div>
                 <div className="cov-hours" aria-hidden="true">
                   {covHours.map((x) => (
-                    <span key={x.h} style={{ left: `${pct(x.h)}%`, width: `${100 / span}%` }}>{x.label}</span>
+                    <span key={x.h} style={{ left: `${pct(x.h)}%`, width: `${(Math.min(1, settings.close - x.h) / span) * 100}%` }}>{x.label}</span>
                   ))}
                 </div>
                 <div className="legend" style={{ marginTop: 6 }}>
@@ -417,15 +499,19 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
             </strong>
             <div className="selbar-sub">
               {effVariant === 'geltend'
-                ? 'Der geltende Plan ist schreibgeschützt. Zum Ändern in die Testfassung wechseln.'
+                ? 'Der geltende Plan ist schreibgeschützt.'
                 : selDraggable
-                  ? 'Ziehen verschiebt, Ränder ändern die Dauer · Tasten: ←/→, Alt = Beginn, Umschalt = Ende, Entf = löschen · Neues Zeitfenster: in der Zeile auf eine freie Stelle ziehen'
+                  ? 'Ziehen verschiebt, Ränder ändern die Dauer · Tasten ←/→, mit Alt der Beginn, mit Umschalt das Ende · Entf entfernt'
                   : unlockable
                     ? 'Laut Profil unverrückbar. Zum Ändern bewusst entsperren.'
-                    : 'Dieser Blocktyp lässt sich nicht verschieben.'}
+                    : 'Termine änderst du oben unter „Termine“.'}
             </div>
           </div>
-          {unlockable ? (
+          {effVariant === 'geltend' ? (
+            <button className="dbtn" onClick={() => { if (!hasTest) dispatch({ type: 'createTest' }); setVariant('test'); select(null); }}>
+              {hasTest ? 'Zur Testfassung' : 'Testfassung anlegen'}
+            </button>
+          ) : unlockable ? (
             confirmUnlock ? (
               <span className="confirm" role="group" aria-label="Entsperren bestätigen">
                 Harte Zeit wirklich ändern? Die Abweichung bleibt als Hinweis sichtbar.
@@ -438,11 +524,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               <button className="dbtn" onClick={() => setConfirmUnlock(true)}>Entsperren …</button>
             )
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Block anpassen">
-              <button className="dbtn" onClick={() => nudge(-STEP, 'move')} disabled={!selDraggable} aria-label="15 Minuten früher">◂ 15 Min</button>
-              <button className="dbtn" onClick={() => nudge(STEP, 'move')} disabled={!selDraggable} aria-label="15 Minuten später">15 Min ▸</button>
-              <button className="dbtn" onClick={() => nudge(-STEP, 'r')} disabled={!selDraggable}>Ende −15</button>
-              <button className="dbtn" onClick={() => nudge(STEP, 'r')} disabled={!selDraggable}>Ende +15</button>
+            <div className="selbar-actions" role="group" aria-label="Zeitfenster bearbeiten">
               {selEditable && EDIT_TYPES.includes(selBlock.type) && (
                 <label className="dsel">
                   <span className="visually-hidden">Art</span>
@@ -459,20 +541,34 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               )}
               {canPauseHere && (
                 <button className="dbtn" onClick={onInsertPause} title="Teilt das Zeitfenster; die Pause lässt sich danach entlang der Zeitleiste ziehen">
-                  Pause einziehen ({fmtDuration(pauseLen)} h)
+                  Pause einfügen ({fmtDuration(pauseLen)} h)
                 </button>
               )}
-              {effVariant === 'test' && hasRoomAfter && (
+              {hasRoomAfter && (
                 <button className="dbtn" onClick={onAddAfter}>+ Zeitfenster danach</button>
               )}
-              {selEditable && (
-                <button className="dbtn" onClick={() => setSelDay(deleteBlock(selBlocks, selBlock.id), null)}>
-                  {selBlock.type === 'pause' ? 'Pause entfernen' : 'Löschen'}
-                </button>
+              {selDraggable && (
+                <>
+                  <span className="dpair" role="group" aria-label="Verschieben">
+                    <span className="dpair-label" aria-hidden="true">Verschieben</span>
+                    <button className="dbtn icon" onClick={() => nudge(-STEP, 'move')} aria-label="15 Minuten früher" title="15 Minuten früher"><ChevronLeft /></button>
+                    <button className="dbtn icon" onClick={() => nudge(STEP, 'move')} aria-label="15 Minuten später" title="15 Minuten später"><ChevronRight /></button>
+                  </span>
+                  <span className="dpair" role="group" aria-label="Ende">
+                    <span className="dpair-label" aria-hidden="true">Ende</span>
+                    <button className="dbtn icon" onClick={() => nudge(-STEP, 'r')} aria-label="Ende 15 Minuten früher" title="Ende 15 Minuten früher"><ChevronLeft /></button>
+                    <button className="dbtn icon" onClick={() => nudge(STEP, 'r')} aria-label="Ende 15 Minuten später" title="Ende 15 Minuten später"><ChevronRight /></button>
+                  </span>
+                </>
               )}
-              {effVariant === 'test' && selBlock.verb === 'hart' && selBlock.unlocked && (
+              {selBlock.verb === 'hart' && selBlock.unlocked && (
                 <button className="dbtn" onClick={() => dispatch({ type: 'setUnlocked', personId: selected.personId, day: selected.day, blockId: selBlock.id, unlocked: false })}>
                   Wieder sperren
+                </button>
+              )}
+              {selEditable && (
+                <button className="dbtn danger" onClick={() => setSelDay(deleteBlock(selBlocks, selBlock.id), null)}>
+                  {selBlock.type === 'pause' ? 'Pause entfernen' : 'Entfernen'}
                 </button>
               )}
             </div>
@@ -481,14 +577,14 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
         </div>
       )}
 
-      <h2 className="h2">Was am {DAY_FULL[day]} auffällt</h2>
+      <h2 className="h2" id="befunde" tabIndex={-1}>Was am {DAY_FULL[day]} auffällt</h2>
       <div className="findings">
         {lautFindings.map((f, i) => (
           <div className={`finding tone-${f.kind}`} key={i}>
             <span className="dot" />
             <div>
               <div className="finding-title">
-                <span className="visually-hidden">{f.kind === 'v' ? 'Verstoß: ' : f.kind === 'h' ? 'Hinweis: ' : ''}</span>
+                <span className="visually-hidden">{f.kind === 'v' ? 'Problem: ' : f.kind === 'h' ? 'Hinweis: ' : ''}</span>
                 {f.title}
               </div>
               <div className="finding-desc">{f.desc}</div>
@@ -528,7 +624,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                 <span className="dot" />
                 <div>
                   <div className="finding-title">
-                    <span className="visually-hidden">{f.kind === 'v' ? 'Verstoß: ' : 'Hinweis: '}</span>
+                    <span className="visually-hidden">{f.kind === 'v' ? 'Problem: ' : 'Hinweis: '}</span>
                     {f.title}
                   </div>
                   <div className="finding-desc">{f.desc}</div>
@@ -563,14 +659,12 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                   <td>{dienstTage(r.person, plan, settings, 'frueh').length}</td>
                   <td>{dienstTage(r.person, plan, settings, 'spaet').length}</td>
                   <td className="strong">
-                    {fmtDecimal(r.ist, 1)}
+                    {fmtHours(r.ist)}
                     {Math.abs(r.ist - r.person.soll) > 0.01 && (
-                      <span className="hint" style={{ fontWeight: 400 }}>
-                        {' '}({r.ist > r.person.soll ? '+' : '−'}{fmtDecimal(Math.abs(r.ist - r.person.soll), 1)})
-                      </span>
+                      <span className="hint" style={{ fontWeight: 400 }}> ({fmtSollDiff(r.ist, r.person.soll).chip})</span>
                     )}
                   </td>
-                  <td>{r.person.soll}</td>
+                  <td>{fmtHours(r.person.soll)}</td>
                 </tr>
               ))}
             </tbody>
@@ -594,7 +688,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               </tbody>
             </table>
             <div className="hint" style={{ marginTop: 8, fontSize: 12 }}>
-              <strong>Zusätzlich, unabhängig von der Staffel:</strong> länger als {fmtDecimal(settings.maxAmStueck, settings.maxAmStueck % 1 ? 2 : 0)} Stunden
+              <strong>Zusätzlich, unabhängig von der Staffel:</strong> länger als {fmtHours(settings.maxAmStueck)} Stunden
               am Stück ohne Ruhepause ist unzulässig, unabhängig davon, wo die Pflichtpause im Tag liegt. Geprüft wird die Spalte „Volljährig“ mit den
               Werten aus den Einstellungen. Die Regeln für unter 18-Jährige werden noch nicht geprüft.
             </div>

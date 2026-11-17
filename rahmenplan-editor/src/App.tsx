@@ -16,6 +16,7 @@ import { ProfileDrawer } from './components/ProfileDrawer';
 import { SettingsView } from './components/SettingsView';
 import { PrintView } from './components/PrintView';
 import { ConfirmDialog, type ConfirmRequest } from './components/ConfirmDialog';
+import { RedoIcon, UndoIcon } from './components/Icons';
 
 type View = 'plan' | 'personal' | 'settings';
 const BACKUP_REMIND_DAYS = 7;
@@ -217,32 +218,31 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
       <div className="app">
         <header className="head">
           <div>
-            <div className="kicker">{data.settings.kitaName}</div>
             <h1>Rahmenplan</h1>
             <div className="sub">
-              Mo–Fr {fmtShort(data.settings.open)}–{fmtShort(data.settings.close)} · {kinder} Kinder · {data.persons.length} Personen ·{' '}
+              <strong className="sub-kita">{data.settings.kitaName}</strong> · Mo–Fr {fmtShort(data.settings.open)}–{fmtShort(data.settings.close)} · {kinder} Kinder · {data.persons.length} Personen ·{' '}
               {stunden.toLocaleString('de-DE')} Wochenstunden
             </div>
           </div>
           <div className="head-right">
-            <div className="tools" role="group" aria-label="Geltenden Plan teilen und Daten sichern">
-              <span className="tools-label">Geltenden Plan teilen:</span>
-              <button className="pill sm" onClick={print}>Drucken / PDF</button>
-              <button className="pill sm" onClick={exportCsv}>CSV (Excel)</button>
-            </div>
             <div className="head-status">
-            <div className={`save-status ${statusTone}`} role="status" aria-live="polite" title={backend.label}>
-              <span className="save-dot" aria-hidden="true" />
-              {statusText(status, backend)}
-            </div>
-            <div className="undo-group" role="group" aria-label="Verlauf">
-              <button className="pill sm" onClick={doUndo} disabled={!canUndo} title="Rückgängig (Strg+Z)" aria-keyshortcuts="Control+Z">
-                ↶ Rückgängig
-              </button>
-              <button className="pill sm" onClick={doRedo} disabled={!canRedo} title="Wiederholen (Strg+Y)" aria-keyshortcuts="Control+Y" aria-label="Wiederholen">
-                ↷
-              </button>
-            </div>
+              <div className={`save-status ${statusTone}`} role="status" aria-live="polite" title={backend.label}>
+                <span className="save-dot" aria-hidden="true" />
+                {statusText(status, backend)}
+              </div>
+              <div className="undo-group" role="group" aria-label="Verlauf">
+                <button className="pill sm icon-pill" onClick={doUndo} disabled={!canUndo} title="Rückgängig (Strg+Z)" aria-label="Rückgängig" aria-keyshortcuts="Control+Z">
+                  <UndoIcon /> <span className="lbl">Rückgängig</span>
+                </button>
+                <button className="pill sm icon-pill" onClick={doRedo} disabled={!canRedo} title="Wiederholen (Strg+Y)" aria-label="Wiederholen" aria-keyshortcuts="Control+Y">
+                  <RedoIcon /> <span className="lbl">Wiederholen</span>
+                </button>
+              </div>
+              <span className="head-sep" aria-hidden="true" />
+              <div className="tools" role="group" aria-label="Geltenden Plan teilen">
+                <button className="pill sm" onClick={print} title="Druckt den geltenden Plan (oder speichert ihn als PDF)">Drucken / PDF</button>
+                <button className="pill sm" onClick={exportCsv} title="Geltenden Plan als Tabelle für Excel herunterladen">CSV (Excel)</button>
+              </div>
             </div>
             <nav className="seg" aria-label="Ansicht">
               <button aria-pressed={view === 'plan'} onClick={() => setView('plan')}>Rahmenplan</button>
@@ -304,6 +304,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               confirm={setConfirmReq}
               goTo={setView}
               notify={setToast}
+              onBackup={backup}
             />
           )}
           {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} onNewPerson={newPerson} />}

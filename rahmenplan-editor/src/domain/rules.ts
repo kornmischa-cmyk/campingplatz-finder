@@ -27,6 +27,8 @@ export interface Finding {
   canResetFromProfile?: boolean;
   /** Fehlende Pause lässt sich automatisch einfügen */
   canInsertPause?: boolean;
+  /** Zeitraum, auf den sich der Befund bezieht (für „Im Plan zeigen“) */
+  span?: Span;
   /** Leiser Hinweis (bewusste Abweichung von der Normalzeit): zählt nicht als Hinweis, nur zur Kontrolle */
   quiet?: boolean;
 }
@@ -124,6 +126,7 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
   for (const x of fkSpans) {
     L.push({
       kind: 'v',
+      span: x,
       title: `${fkWord} · ${fmt(x.start)}–${fmt(x.end)}`,
       desc:
         settings.minFachkraefte === 1
@@ -135,6 +138,7 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
     const need = randzeitMin(x.start, settings);
     L.push({
       kind: 'v',
+      span: x,
       title: `Weniger als ${need} Personen · ${fmt(x.start)}–${fmt(x.end)}`,
       desc: `Früh- und Spätdienst (zusammengelegte Gruppen) verlangen mindestens ${need} Personen in der Betreuung.`,
     });
@@ -234,7 +238,7 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
     /** leise Hinweise (Abweichung von der Normalzeit) */
     i: L.filter((f) => f.quiet).length,
   };
-  if (!L.some((f) => !f.quiet)) L.unshift({ kind: 'ok', title: 'Keine Verstöße', desc: 'Alle hinterlegten Regeln sind für diesen Tag erfüllt.' });
+  if (!L.some((f) => !f.quiet)) L.unshift({ kind: 'ok', title: 'Keine Probleme', desc: 'Alle hinterlegten Regeln sind für diesen Tag erfüllt.' });
 
   const violationSpans = [
     ...fkSpans.map((s) => ({ ...s, label: fkWord })),

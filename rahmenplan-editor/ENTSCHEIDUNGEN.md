@@ -19,6 +19,30 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Impeccable-Überarbeitung (17.11.2026)
+
+Kritik 26/40 (Bericht in `.impeccable/critique/`). Umgesetzt: alle P1 und P2, Abstände/Tokens dort, wo angefasst.
+- **Zeitleiste nach oben:** Der große Status-Block ist weg. Der Status steht als klickbare Pille oben in der Planungskarte
+  („3 Probleme · 1 Hinweis · Liste ↓“, springt zur Befundliste). Termine sind eine einzeilige Leiste in der Karte
+  („Bearbeiten“ klappt die Liste auf). Tageskarten flacher, Kopf kompakter (Kita-Name in der Unterzeile statt Label über dem Titel).
+  Erste Person bei 1440×900 jetzt ca. 500 px statt 810 px (mit Demo-Hinweis 570 px).
+- **Probleme ↔ Plan verbunden:** Jeder Befund hat „Im Plan zeigen“ (scrollt zur Person bzw. zur Zeit und hebt sie kurz hervor).
+  Unterbesetzung erscheint einmal als Streifen an der Zeitachse plus zarte rote Fläche über alle Zeilen – nicht mehr pro Gruppe.
+- **Übernehmen abgesichert:** Vergleich bisher/Testfassung als Tabelle, Liste der geänderten Personen und Tage,
+  Knopf „Vorher Sicherung herunterladen“, bei Problemen roter Knopf „Trotz N Problemen übernehmen“ (bleibt möglich),
+  danach Meldung mit Hinweis auf Rückgängig (Übernehmen ist per Strg+Z umkehrbar).
+- **Wochenzähler:** Stunden:Minuten („31:15 / 32 h · noch 0:45“, „+1:30“, „✓“), auch in der Wochenübersicht.
+  Punkte 10 px mit kräftigeren Farben, Legende an der Zeitachse, Namensspalte 252 px.
+- **Auswahlleiste:** Art · Pause einfügen · + Zeitfenster danach · Verschieben ◂▸ · Ende ◂▸ · Entfernen (abgesetzt) · Fertig;
+  Hilfe einzeilig. Im geltenden Plan nur Hinweis + „Zur Testfassung“. „Verwerfen“/„Übernehmen“ nur in der Testfassung.
+- **Einheitliche Begriffe:** „Problem“ (statt Verstoß/Problem gemischt), „Pause einfügen“, „Entfernen“.
+- **Kontrast und Bedienflächen:** `--text-3` #766a5c, neue `--border-ctl` #9c8a72 für Knöpfe/Eingabefelder,
+  Avatar-Kürzel in dunklerem Gruppenton (≥ 4,5:1), Checkboxen 18 px, Knopfhöhen 32/36 px, Ziehgriffe mit größerer Trefferfläche,
+  Pfeile in den Einstellungen als 32-px-Icon-Knöpfe. Eigene Strich-Icons statt Unicode-Pfeilen.
+- **Rhythmus:** Abschnitte 16/24/32 px, Karten 20/24 Innenabstand, Zeilenhöhe 56 px, Tabellen 12 px.
+- Behoben: falscher waagerechter Scrollbalken in der Zeitleiste; kollidierende Uhrzeiten „16:00 16:30“ bei schmalen Fenstern.
+- Bewusst nicht gemacht: Personalansicht breiter, Profil-Feinschliff („pro Woche“-Umbruch), Startseite umbauen (P3).
+
 ## Freie Bearbeitung in der Zeitleiste, leise Abweichungen (16.11.2026)
 
 - **Zeitfenster aufziehen:** In der Testfassung auf eine freie Stelle einer Zeile ziehen → neuer Block (Betreuung, weich),

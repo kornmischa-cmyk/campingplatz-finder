@@ -165,8 +165,8 @@ export function Root() {
     <div className="app start">
       <header className="head">
         <div>
-          <div className="kicker">Kita-Personalplanung</div>
           <h1>Rahmenplan</h1>
+          <div className="sub">Personalplanung für die Kita – läuft ohne Internet, direkt im Browser.</div>
         </div>
       </header>
 
