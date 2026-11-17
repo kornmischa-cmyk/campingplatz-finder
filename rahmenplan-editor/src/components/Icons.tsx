@@ -22,3 +22,4 @@ export const ChevronRight = () => <Stroke d="M6 3.5 10.5 8 6 12.5" />;
 export const ChevronUp = () => <Stroke d="M3.5 10 8 5.5l4.5 4.5" />;
 export const ChevronDown = () => <Stroke d="M3.5 6 8 10.5 12.5 6" />;
 export const ArrowDown = () => <Stroke d="M8 2.5v11M3.5 9 8 13.5 12.5 9" size={13} />;
+export const CloseIcon = () => <Stroke d="M4 4l8 8M12 4l-8 8" />;

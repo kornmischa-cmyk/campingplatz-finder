@@ -170,6 +170,7 @@ export function Root() {
         </div>
       </header>
 
+      <main>
       {phase.kind === 'start' && (
         <div className="start-grid">
           {phase.error && (
@@ -288,6 +289,7 @@ export function Root() {
           )}
         </div>
       )}
+      </main>
     </div>
   );
 }

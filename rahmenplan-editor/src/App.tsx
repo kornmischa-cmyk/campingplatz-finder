@@ -216,6 +216,11 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
   return (
     <>
       <div className="app">
+        {view === 'plan' && (
+          <a className="skip-link" href="#plan">
+            Zum Plan springen
+          </a>
+        )}
         <header className="head">
           <div>
             <h1>Rahmenplan</h1>
@@ -252,6 +257,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
           </div>
         </header>
 
+        <main>
         {status.kind === 'conflict' && (
           <div className="banner bad" role="alert">
             <span style={{ flex: '1 1 380px' }}>
@@ -291,7 +297,6 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
           </div>
         )}
 
-        <main>
           {view === 'plan' && (
             <PlanView
               data={data}

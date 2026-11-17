@@ -79,22 +79,37 @@ function mergeSpans(spans: { start: number; end: number }[]): { start: number; e
 const CH = 7; // ca. Pixel pro Zeichen bei 12px Schrift
 
 /** Beschriftung abhängig von der verfügbaren Pixelbreite; Pausen ohne Kurzbeschriftung */
-function blockLabel(b: Block, px: number): string {
+/** Kurzname der Blockart im Block (Betreuung ohne, weil Standard und in Gruppenfarbe) */
+const SHORT_TYPE: Record<Block['type'], string> = { betreuung: '', verfuegung: 'Verfügung', besprechung: 'Bespr.', anleitung: 'Anl.', pause: 'Pause' };
+/** Blockarten mit Muster: Beschriftung sitzt auf einem hellen Etikett, damit das Muster nicht durch die Schrift läuft */
+export const PATTERNED = new Set<Block['type']>(['verfuegung', 'besprechung', 'anleitung']);
+
+/** Beschriftung abhängig von der verfügbaren Pixelbreite; die Blockart steht im Text (nicht nur im Muster) */
+export function blockLabel(b: Block, px: number): string {
   const full = `${fmt(b.start)}–${fmt(b.end)}`;
-  if (px >= full.length * CH) return full;
   const short = `${fmtShort(b.start)}–${fmtShort(b.end)}`;
-  if (px >= short.length * CH) return short;
-  const s = fmtShort(b.start);
-  return b.type !== 'pause' && px >= s.length * CH ? s : '';
+  const st = fmtShort(b.start);
+  const k = SHORT_TYPE[b.type];
+  const pad = PATTERNED.has(b.type) ? 12 : 0;
+  const cands =
+    b.type === 'betreuung'
+      ? [full, short, st]
+      : b.type === 'pause'
+        ? [`Pause ${short}`, 'Pause']
+        : [`${TYPE_LABEL[b.type]} ${full}`, `${k} ${full}`, `${k} ${short}`, k, k.slice(0, 1)];
+  return cands.find((c) => px >= c.length * CH + pad) ?? '';
 }
 
 export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay, flash }: Props) {
   const [openBadge, setOpenBadge] = useState<string | null>(null);
   useEffect(() => {
     if (!openBadge) return;
+    // Fokus ins Popover, damit die Aktionen direkt per Tab erreichbar sind
+    document.querySelector<HTMLElement>('.p-pop')?.focus();
     const close = (e: Event) => {
       if (e.type === 'keydown' && (e as globalThis.KeyboardEvent).key !== 'Escape') return;
       if (e.type === 'mousedown' && (e.target as HTMLElement).closest('.p-pop, .p-badge')) return;
+      if (e.type === 'keydown') document.querySelector<HTMLElement>(`[data-badge="${CSS.escape(openBadge)}"]`)?.focus();
       setOpenBadge(null);
     };
     document.addEventListener('mousedown', close);
@@ -257,10 +272,21 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
           ))}
         </div>
       </div>
+      <span id="blk-help-edit" hidden>
+        Pfeiltasten verschieben, Alt plus Pfeil ändert den Beginn, Umschalt plus Pfeil das Ende, Entf entfernt.
+      </span>
+      <span id="blk-help-locked" hidden>
+        Harte Zeit laut Profil. Zum Entsperren auswählen.
+      </span>
       {result.violationSpans.length > 0 && (
         <div className="row vrow">
-          <div className="vrow-label">Unterbesetzt</div>
-          <div className="vstripe">
+          <div className="vrow-label">
+            Unterbesetzt
+            <span className="visually-hidden">
+              : {result.violationSpans.map((v) => `${v.label} ${fmt(v.start)} bis ${fmt(v.end)}`).join('; ')}
+            </span>
+          </div>
+          <div className="vstripe" aria-hidden="true">
             {result.violationSpans.map((s, i) => {
               const hl = flash?.span && flash.span.start < s.end && flash.span.end > s.start;
               return (
@@ -355,6 +381,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                               aria-label={label}
                               title={label}
                               aria-expanded={openBadge === p.id}
+                              data-badge={p.id}
                               onClick={() => setOpenBadge(openBadge === p.id ? null : p.id)}
                             >
                               {nv ? nv : nh ? '!' : '≠'}
@@ -381,7 +408,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                       </div>
                     </div>
                     {openBadge === p.id && (
-                      <div className="p-pop" role="dialog" aria-label={`Probleme bei ${p.name}`}>
+                      <div className="p-pop" role="dialog" aria-label={`Probleme bei ${p.name}`} tabIndex={-1}>
                         <strong>{p.name}</strong>
                         <ul>
                           {(personFindings[p.id] ?? []).map((f, i) => (
@@ -431,11 +458,8 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                       const px = (dur / span) * laneW - (draggable ? 24 : 14) - (b.verb === 'hart' ? 13 : 0);
                       const label = blockLabel(b, px);
                       const hartText = b.verb === 'hart' ? (b.unlocked ? ', harte Zeit, entsperrt' : ', harte Zeit, gesperrt') : '';
-                      const aria =
-                        `${p.name}, ${TYPE_LABEL[b.type]}, ${fmt(b.start)} bis ${fmt(b.end)}${hartText}` +
-                        (draggable ? '. Pfeiltasten verschieben, Alt plus Pfeil ändert Beginn, Umschalt plus Pfeil ändert Ende.' : '') +
-                        (editable ? ' Entf löscht.' : '') +
-                        (hardLockedInTest ? '. Zum Entsperren auswählen.' : '');
+                      const aria = `${p.name}, ${TYPE_LABEL[b.type]}, ${fmt(b.start)} bis ${fmt(b.end)}${hartText}`;
+                      const help = draggable ? 'blk-help-edit' : hardLockedInTest ? 'blk-help-locked' : undefined;
                       const cls = ['blk', `t-${b.type}`, draggable && 'draggable', isSel && 'selected', isDrag && 'dragging'].filter(Boolean).join(' ');
                       return (
                         <div
@@ -450,6 +474,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           tabIndex={focusable ? 0 : -1}
                           role={focusable ? 'button' : 'img'}
                           aria-label={aria}
+                          aria-describedby={help}
                           aria-pressed={focusable ? isSel : undefined}
                           title={`${p.name} · ${TYPE_LABEL[b.type]} · ${fmt(b.start)}–${fmt(b.end)}${hartText}`}
                           onFocus={() => {
@@ -461,7 +486,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                             if (draggable && e.button === 0) startDrag(e, p.id, blocks, idx, 'move', e.currentTarget);
                           }}
                         >
-                          <span className="blk-label">
+                          <span className={`blk-label${PATTERNED.has(b.type) ? ' on-pattern' : ''}`}>
                             {b.verb === 'hart' && <LockIcon open={!!b.unlocked} />}
                             <span>{label}</span>
                           </span>

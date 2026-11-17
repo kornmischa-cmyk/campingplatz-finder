@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { CloseIcon } from './Icons';
 import type { AppData, Block, Day, DienstArt, DienstVorgabe, Person, Settings } from '../domain/types';
 import { BLOCK_TYPES, DAYS, TYPE_LABEL } from '../domain/types';
 import { blockListIssues, sortBlocks, templateFor } from '../domain/plan';
@@ -60,9 +61,7 @@ function BlockEditor({
             <option value="weich">weich</option>
             <option value="hart">hart</option>
           </select>
-          <button className="linkbtn danger" style={{ textDecoration: 'none', fontSize: 13 }} title="Block entfernen" onClick={() => onChange(blocks.filter((_, j) => j !== i))} aria-label={`${label}, Block ${i + 1} entfernen`}>
-            ✕
-          </button>
+          <button className="icon-btn" title="Block entfernen" onClick={() => onChange(blocks.filter((_, j) => j !== i))} aria-label={`${label}, Block ${i + 1} entfernen`}><CloseIcon /></button>
         </div>
       ))}
       {issues.length > 0 && (

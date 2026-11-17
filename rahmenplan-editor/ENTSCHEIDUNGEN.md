@@ -19,6 +19,23 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Barrierefreiheit (17.11.2026)
+
+Check mit axe-core (WCAG 2.2 AA, 10 Ansichten), Kontrastberechnung, Tastatur-, Zoom- und Textabstandsprüfung.
+Vorher: Blockarten nur über zu blasse Muster unterscheidbar (Schraffur 1,66:1, Punkte 2,14:1, Pausenrand 1,48:1 – WCAG 1.4.11),
+Kreuzschraffur lief durch die Uhrzeiten. Jetzt:
+- **Blockart steht im Text** („Dienstbesprechung 14:15–15:45“, bei wenig Platz „Bespr.“, „Anl.“, „Verfügung“, „Pause“).
+  Betreuung bleibt ohne Artnamen (Standard, Gruppenfarbe).
+- **Etikett:** Auf Mustern sitzt die Beschriftung auf einem hellen Etikett, das Muster läuft nicht mehr durch die Schrift.
+- **Muster und Pausenrand ≥ 3:1** (#a67a35 bzw. #9c8a72).
+- ✕ im Profil als 32-px-Icon-Knopf (vorher 11 px breit, WCAG 2.5.8).
+- Unterbesetzung und Besetzungssäulen mit Text für Screenreader; Fokus springt ins Problem-Popover, Esc gibt ihn zurück.
+- Block-Ansage kurz („Carla, Betreuung, 08:00 bis 09:00“), Tastaturhilfe einmal per `aria-describedby`.
+- Sprunglink „Zum Plan springen“, `<main>` auf Start- und App-Seite, Überschriften lückenlos (h1 → h2 → h3).
+- Ergebnis: axe-core 0 Verstöße in allen 10 Ansichten. Bestanden: Fokusrahmen, Textabstand 1.4.12, 200 % Zoom.
+- Nicht automatisch prüfbar und bewusst offen: echte Screenreader-Tests (NVDA mit Edge), Drag & Drop hat Tastatur-Ersatz
+  (Pfeiltasten, „+ Zeitfenster danach“), aber „Zeitfenster aufziehen“ mitten in einer Zeile nur per Maus.
+
 ## Impeccable-Überarbeitung (17.11.2026)
 
 Kritik 26/40 (Bericht in `.impeccable/critique/`). Umgesetzt: alle P1 und P2, Abstände/Tokens dort, wo angefasst.

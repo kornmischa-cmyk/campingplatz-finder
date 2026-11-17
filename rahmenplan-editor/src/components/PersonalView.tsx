@@ -52,7 +52,7 @@ export function PersonalView({ data, dispatch, onOpenProfile, onNewPerson }: Pro
           <div className="personal-group" key={group.id}>
             <div className="personal-group-title">
               <span className="group-dot" style={{ background: gc.c }} />
-              <h3>{group.name}</h3>
+              <h2>{group.name}</h2>
               <span className="muted">{[group.kinder ? `${group.kinder} Kinder` : '', group.alter].filter(Boolean).join(', ')}</span>
               <span className="spacer" />
               {group.id !== '__ohne' && (
@@ -94,7 +94,7 @@ export function PersonalView({ data, dispatch, onOpenProfile, onNewPerson }: Pro
           addGroup();
         }}
       >
-        <h3>Neue Gruppe</h3>
+        <h2>Neue Gruppe</h2>
         <input className="input" aria-label="Name der neuen Gruppe" placeholder="Name, z. B. Bären" value={gName} onChange={(e) => setGName(e.target.value)} />
         <input className="input num" style={{ flex: "0 0 90px", width: 90 }} aria-label="Anzahl Kinder" placeholder="Kinder" inputMode="numeric" value={gKinder} onChange={(e) => setGKinder(e.target.value.replace(/\D/g, ''))} />
         <button type="submit" className="pill" disabled={!gName.trim()}>

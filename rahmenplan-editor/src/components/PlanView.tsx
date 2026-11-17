@@ -376,7 +376,8 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
         })}
       </div>
 
-      <div className="card plan-card">
+      <section className="card plan-card" id="plan" tabIndex={-1} aria-labelledby="plan-title">
+        <h2 id="plan-title" className="visually-hidden">Plan am {DAY_FULL[day]} · {variantLabel}</h2>
         <div className="plan-toolbar">
           {c.v || c.h ? (
             <button type="button" className={`status-pill tone-${t}`} onClick={goFindings} aria-live="polite">
@@ -437,7 +438,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                 <div className="cov-explain">Wie viele Personen gerade betreuen. Der dunkle Teil sind Fachkräfte.</div>
               </div>
               <div>
-                <div className="bars" role="img" aria-label="Besetzung je Viertelstunde">
+                <div className="bars" role="img" aria-label={`Besetzung je volle Stunde (Personen in Betreuung, davon Fachkräfte): ${covHours.map((x) => `${fmtShort(x.h)} Uhr ${x.label.replace(' / ', ', davon ')}`).join('; ')}`}>
                   {result.slots.map((s) => {
                     const badT = totShort(s, settings);
                     const badF = fkShort(s, settings);
@@ -488,7 +489,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
             <LockIcon /> harte Zeit (laut Profil unverrückbar)
           </span>
         </div>
-      </div>
+      </section>
 
       {selected && selBlock && selPerson && (
         <div className="selbar">
