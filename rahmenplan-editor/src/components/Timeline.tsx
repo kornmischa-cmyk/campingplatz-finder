@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
 import type { AppData, Block, Day, Plan, Variant } from '../domain/types';
-import { TYPE_LABEL } from '../domain/types';
+import { DAYS, TYPE_LABEL } from '../domain/types';
 import { applyDrag, canDrag, isLocked, planDrag, pxToDelta, type DragMode, type DragPlan } from '../domain/drag';
 import { blocksOf } from '../domain/plan';
 import type { DayResult, Finding } from '../domain/rules';
@@ -257,7 +257,17 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
             {members.map((p) => {
               const blocks = blocksOf(plan, p.id, day);
               const az = workHours(blocks);
-              const meta = p.qual + (blocks.length ? ` · ${fmtDecimal(az)} h · Soll ${p.soll} h/Wo` : ' · frei');
+              const ist = DAYS.reduce((a, d) => a + workHours(blocksOf(plan, p.id, d)), 0);
+              const diff = ist - p.soll;
+              const sollTone = Math.abs(diff) < 0.01 ? 'ok' : diff > 0 ? 'over' : 'under';
+              const diffText = sollTone === 'ok' ? '✓' : `${diff > 0 ? '+' : '−'}${fmtDecimal(Math.abs(diff), 2)}`;
+              const sollSpoken =
+                sollTone === 'ok'
+                  ? 'Soll erreicht'
+                  : diff > 0
+                    ? `${fmtDecimal(diff, 2)} Stunden über Soll`
+                    : `noch ${fmtDecimal(-diff, 2)} Stunden offen`;
+              const meta = `${p.qual} · heute ${blocks.length ? `${fmtDecimal(az)} h` : 'frei'} · Woche ${fmtDecimal(ist, 2)} von ${fmtDecimal(p.soll, 2)} h verplant, ${sollSpoken}`;
               return (
                 <div className="person-row" key={p.id}>
                   <div className="person-cell">
@@ -295,7 +305,16 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           );
                         })()}
                       </div>
-                      <div className="person-meta" title={meta}>{meta}</div>
+                      <div className={`soll soll-${sollTone}`} title={meta}>
+                        <span className="soll-bar" aria-hidden="true">
+                          <span style={{ width: `${Math.min(100, p.soll ? (ist / p.soll) * 100 : 0)}%` }} />
+                        </span>
+                        <span className="soll-num" aria-hidden="true">
+                          {fmtDecimal(ist, ist % 1 ? 2 : 0)} / {fmtDecimal(p.soll, p.soll % 1 ? 2 : 0)} h
+                        </span>
+                        <span className="soll-diff" aria-hidden="true">{diffText}</span>
+                        <span className="visually-hidden">{meta}</span>
+                      </div>
                     </div>
                     {openBadge === p.id && (
                       <div className="p-pop" role="dialog" aria-label={`Probleme bei ${p.name}`}>

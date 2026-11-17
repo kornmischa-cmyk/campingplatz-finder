@@ -87,14 +87,15 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
 
   const weekCounts = (v: 'test' | 'geltend') => {
     const pl = v === 'test' ? data.plans.test : data.plans.geltend;
-    if (!pl) return { v: 0, h: 0 };
+    if (!pl) return { v: 0, h: 0, i: 0, soll: 0 };
     const wf = dienstWochenFindings(persons, pl, settings);
+    const soll = weekTable(persons, pl).filter((r) => Math.abs(r.ist - r.person.soll) > 0.01).length;
     return DAYS.reduce(
       (acc, d) => {
         const c = evaluateDay(persons, pl, d, settings, data.termine).counts;
-        return { v: acc.v + c.v, h: acc.h + c.h };
+        return { ...acc, v: acc.v + c.v, h: acc.h + c.h, i: acc.i + c.i };
       },
-      { v: wf.filter((f) => f.kind === 'v').length, h: wf.filter((f) => f.kind === 'h').length },
+      { v: wf.filter((f) => f.kind === 'v').length, h: wf.filter((f) => f.kind === 'h').length, i: 0, soll },
     );
   };
 
@@ -114,6 +115,18 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
             <br />
             Woche Testfassung: <strong>{t.v} Verstöße</strong>, {t.h} Hinweise
           </p>
+          {(t.i > 0 || t.soll > 0) && (
+            <p className="hint">
+              Zur Kontrolle (kein Problem):{' '}
+              {[
+                t.i ? `${t.i} ${t.i === 1 ? 'Tag weicht' : 'Tage weichen'} von der Normalarbeitszeit ab` : '',
+                t.soll ? `${t.soll} ${t.soll === 1 ? 'Person ist' : 'Personen sind'} nicht genau auf ihrem Wochen-Soll` : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              .
+            </p>
+          )}
         </>
       ),
       confirmLabel: 'Übernehmen',

@@ -408,3 +408,15 @@ dialog.confirm-dialog p { font-size: 14px; margin: 0 0 8px; }
 .lane-add { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 12.5px; font-weight: 600; border: 1.5px dashed var(--line-2); background: var(--card-warm); color: var(--text-2); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 .lane-add:hover { border-color: var(--text-3); color: var(--ink); }
 .selbar .dsel select { font: inherit; font-size: 13px; font-weight: 600; border: none; border-radius: 999px; padding: 7px 10px; background: var(--dark-btn); color: #fff; cursor: pointer; }
+
+/* Mitlaufender Wochenzähler an der Person: verplant / Soll */
+.soll { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.soll-bar { flex: 0 0 44px; height: 6px; border-radius: 999px; background: var(--line-2); overflow: hidden; }
+.soll-bar span { display: block; height: 100%; border-radius: 999px; background: var(--text-3); transition: width .15s ease-out; }
+.soll-diff { font-weight: 700; border-radius: 999px; padding: 0 6px; line-height: 17px; }
+.soll-under .soll-diff { color: var(--text-2); background: var(--line); }
+.soll-ok .soll-bar span { background: var(--ok-dot); }
+.soll-ok .soll-diff { color: var(--ok-ink); background: var(--ok-bg); }
+.soll-over .soll-bar span { background: var(--h-dot); }
+.soll-over .soll-diff { color: var(--h-ink); background: var(--h-bg); }
+@media (prefers-reduced-motion: reduce) { .soll-bar span { transition: none; } }

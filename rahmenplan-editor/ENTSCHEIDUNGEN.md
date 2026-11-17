@@ -33,7 +33,11 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 - **„Plan weicht von der Normalarbeitszeit ab“ ist jetzt ein leiser Hinweis:** zählt nicht in Tageskarte/Status,
   steht kompakt unter den Befunden („Abweichungen von der Normalarbeitszeit“) und erscheint an der Person als
   neutrales „≠“ statt gelbem „!“. Bleibt ein normaler Hinweis, wenn die Person an einem Arbeitstag gar nicht eingeplant ist.
-- Offen: Sollen leise Abweichungen im Übernehmen-Dialog mitgezählt werden? Rückgängig machen (Undo) fehlt weiterhin.
+- Übernehmen-Dialog: leise Abweichungen und Personen abseits ihres Wochen-Solls stehen dort als dezente Zeile „Zur Kontrolle (kein Problem)“.
+- **Wochenzähler an jeder Person (17.11.2026):** Unter dem Namen läuft „verplant / Soll h“ mit Balken und Differenz mit –
+  auf jedem Tag, live beim Ziehen. Grau = noch offen, grün ✓ = Soll erreicht, gelb = über Soll. Kein Verstoß, reine Steuerungshilfe.
+  Qualifikation und heutige Stunden stehen im Tooltip bzw. für Screenreader.
+- Offen: Rückgängig machen (Undo).
 
 ## Profiländerungen wirken auf den Plan (15.11.2026)
 

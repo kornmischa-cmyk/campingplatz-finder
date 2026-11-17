@@ -175,8 +175,11 @@ describe('App (Smoke)', () => {
     d.plans.test = { since: '', blocks: { a: { Mo: [block(8, 12)] } } };
     renderApp(d);
     fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    // Wochenzähler an der Person läuft mit
+    expect(screen.getByText(/Woche 4,00 von 20,00 h verplant, noch 16,00 Stunden offen/)).toBeTruthy();
     fireEvent.focus(screen.getByRole('button', { name: /^Anna, Betreuung, 08:00 bis 12:00/ }));
     fireEvent.click(screen.getByRole('button', { name: /^Pause einziehen/ }));
+    expect(screen.getByText(/Woche 3,50 von 20,00 h verplant/)).toBeTruthy();
     // Pause ist ausgewählt und lässt sich per Tastatur entlang der Zeitleiste schieben
     const pause = screen.getByRole('button', { name: /^Anna, Pause, 09:45 bis 10:15/ });
     fireEvent.keyDown(pause, { key: 'ArrowRight' });
