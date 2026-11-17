@@ -24,7 +24,8 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 Check mit axe-core (WCAG 2.2 AA, 10 Ansichten), Kontrastberechnung, Tastatur-, Zoom- und Textabstandsprüfung.
 Vorher: Blockarten nur über zu blasse Muster unterscheidbar (Schraffur 1,66:1, Punkte 2,14:1, Pausenrand 1,48:1 – WCAG 1.4.11),
 Kreuzschraffur lief durch die Uhrzeiten. Jetzt:
-- **Blockart steht im Text** („Dienstbesprechung 14:15–15:45“, bei wenig Platz „Bespr.“, „Anl.“, „Verfügung“, „Pause“).
+- **Blockart steht im Text**, wenn Platz ist („Dienstbesprechung 14:15–15:45“, „Bespr. 14:15–15:45“). Reicht der Platz nicht,
+  hat die Uhrzeit Vorrang (Wunsch 17.11.); die Art bleibt dann über das Muster (≥ 3:1), Tooltip und Screenreader erkennbar.
   Betreuung bleibt ohne Artnamen (Standard, Gruppenfarbe).
 - **Etikett:** Auf Mustern sitzt die Beschriftung auf einem hellen Etikett, das Muster läuft nicht mehr durch die Schrift.
 - **Muster und Pausenrand ≥ 3:1** (#a67a35 bzw. #9c8a72).

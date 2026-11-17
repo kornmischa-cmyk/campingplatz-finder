@@ -84,7 +84,7 @@ const SHORT_TYPE: Record<Block['type'], string> = { betreuung: '', verfuegung: '
 /** Blockarten mit Muster: Beschriftung sitzt auf einem hellen Etikett, damit das Muster nicht durch die Schrift läuft */
 export const PATTERNED = new Set<Block['type']>(['verfuegung', 'besprechung', 'anleitung']);
 
-/** Beschriftung abhängig von der verfügbaren Pixelbreite; die Blockart steht im Text (nicht nur im Muster) */
+/** Beschriftung abhängig von der verfügbaren Pixelbreite; bei Platz mit Blockart, sonst zuerst die Uhrzeit */
 export function blockLabel(b: Block, px: number): string {
   const full = `${fmt(b.start)}–${fmt(b.end)}`;
   const short = `${fmtShort(b.start)}–${fmtShort(b.end)}`;
@@ -96,7 +96,8 @@ export function blockLabel(b: Block, px: number): string {
       ? [full, short, st]
       : b.type === 'pause'
         ? [`Pause ${short}`, 'Pause']
-        : [`${TYPE_LABEL[b.type]} ${full}`, `${k} ${full}`, `${k} ${short}`, k, k.slice(0, 1)];
+        : // Uhrzeit vor Name: reicht der Platz nicht für beides, steht die Zeit im Block (Art bleibt am Muster erkennbar)
+          [`${TYPE_LABEL[b.type]} ${full}`, `${k} ${full}`, full, st, k, k.slice(0, 1)];
   return cands.find((c) => px >= c.length * CH + pad) ?? '';
 }
 
