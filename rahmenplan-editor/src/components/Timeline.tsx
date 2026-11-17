@@ -467,8 +467,9 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           key={b.id}
                           className={cls}
                           style={{
-                            left: `${pct(b.start)}%`,
-                            width: `${(dur / span) * 100}%`,
+                            // 1 px Fuge zu jedem Nachbarn: aneinanderstoßende Ränder liegen nicht mehr aufeinander
+                            left: `calc(${pct(b.start)}% + 1px)`,
+                            width: `calc(${(dur / span) * 100}% - 2px)`,
                             ...(b.type === 'betreuung' ? { background: gc.s, borderColor: gc.c } : {}),
                             cursor: isDrag ? (drag!.mode === 'move' ? 'grabbing' : 'ew-resize') : undefined,
                           }}
@@ -491,7 +492,8 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                             {b.verb === 'hart' && <LockIcon open={!!b.unlocked} />}
                             <span>{label}</span>
                           </span>
-                          {draggable && (
+                          {/* Griffe nur, wenn Platz ist – bei sehr kurzen Blöcken würden sie sich überdecken (Ende dann per Leiste/Tastatur) */}
+                          {draggable && (dur / span) * laneW >= 36 && (
                             <>
                               <div
                                 className="grip l"

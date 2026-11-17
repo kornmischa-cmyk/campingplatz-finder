@@ -19,6 +19,13 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Linien in der Zeitleiste (17.11.2026)
+
+- Aneinanderstoßende Blöcke hatten bis zu vier senkrechte Linien an einer Stelle (Griff, Rand, Rand, Griff).
+  Jetzt: 1 px Fuge zu jedem Nachbarn, Ziehgriffe nur bei Zeigerkontakt, Auswahl, Fokus oder beim Ziehen.
+- Sehr kurze Blöcke (< 36 px) zeigen keine Griffe mehr (sie überdeckten sich); verschieben per Ziehen,
+  Dauer über „Ende ◂ ▸“ in der Auswahlleiste oder Umschalt+Pfeil.
+
 ## Barrierefreiheit (17.11.2026)
 
 Check mit axe-core (WCAG 2.2 AA, 10 Ansichten), Kontrastberechnung, Tastatur-, Zoom- und Textabstandsprüfung.
