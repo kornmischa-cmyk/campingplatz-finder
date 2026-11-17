@@ -66,7 +66,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
   const selEditable = !!selBlock && canEdit(selBlock, effVariant);
   const setSelDay = (blocks: Block[], blockId: string | null) => {
     if (!selected) return;
-    dispatch({ type: 'setTestDay', personId: selected.personId, day: selected.day, blocks });
+    dispatch({ type: 'setTestDay', personId: selected.personId, day: selected.day, blocks, step: true });
     select(blockId ? { ...selected, blockId } : null);
   };
   const pauseLen = selPerson && selBlock ? suggestedPause(selBlocks, settings, selPerson.pauseMinuten ?? 0) : 0;
@@ -343,6 +343,10 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               onOpenProfile={onOpenProfile}
               personFindings={personFindings}
               renderActions={actionsFor}
+              onDay={(d) => {
+                setDay(d);
+                select(null);
+              }}
             />
 
             <div className="coverage">

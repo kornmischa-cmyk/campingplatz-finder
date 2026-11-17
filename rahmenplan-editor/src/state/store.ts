@@ -15,7 +15,7 @@ export type Action =
   | { type: 'updatePerson'; id: string; patch: Partial<Person> }
   | { type: 'addPerson'; person: Person }
   | { type: 'removePerson'; id: string }
-  | { type: 'setTestDay'; personId: string; day: Day; blocks: Block[] }
+  | { type: 'setTestDay'; personId: string; day: Day; blocks: Block[]; /** eigener Rückgängig-Schritt (nicht mit Ziehen zusammenfassen) */ step?: boolean }
   | { type: 'resetDayFromProfile'; personId: string; day: Day }
   | { type: 'setUnlocked'; personId: string; day: Day; blockId: string; unlocked: boolean }
   | { type: 'fillMissingFromProfiles' }
@@ -150,6 +150,80 @@ export function reducer(state: AppData, a: Action): AppData {
   }
 }
 
+// ---------- Rückgängig / Wiederholen ----------
+
+export interface History {
+  data: AppData;
+  past: AppData[];
+  future: AppData[];
+  /** Schlüssel und Zeitpunkt der letzten Änderung – schnelle Folgeänderungen am selben Ding werden ein Schritt */
+  lastKey: string | null;
+  lastAt: number;
+}
+
+export type HistoryAction =
+  | { kind: 'do'; action: Action; at: number }
+  | { kind: 'undo' }
+  | { kind: 'redo' }
+  /** Stand von außen geladen: Verlauf verwerfen (sonst würde Rückgängig fremde Änderungen zurückdrehen) */
+  | { kind: 'load'; data: AppData };
+
+const HISTORY_MAX = 100;
+const MERGE_MS = 1200;
+
+/** Ohne Verlaufseintrag (Verwaltung, kein Planinhalt) */
+const NO_HISTORY = new Set<Action['type']>(['markBackup']);
+
+function mergeKey(a: Action): string | null {
+  switch (a.type) {
+    case 'setTestDay':
+      return a.step ? null : `day:${a.personId}:${a.day}`;
+    case 'setSettings':
+      return `settings:${Object.keys(a.patch).sort().join(',')}`;
+    case 'setGroups':
+      return 'groups';
+    case 'updatePerson':
+      return `person:${a.id}:${Object.keys(a.patch).sort().join(',')}`;
+    default:
+      return null;
+  }
+}
+
+export function initHistory(data: AppData): History {
+  return { data, past: [], future: [], lastKey: null, lastAt: 0 };
+}
+
+export function historyReducer(h: History, ha: HistoryAction): History {
+  switch (ha.kind) {
+    case 'load':
+      return initHistory(ha.data);
+    case 'undo': {
+      const prev = h.past[h.past.length - 1];
+      if (!prev) return h;
+      return { data: prev, past: h.past.slice(0, -1), future: [h.data, ...h.future], lastKey: null, lastAt: 0 };
+    }
+    case 'redo': {
+      const [next, ...rest] = h.future;
+      if (!next) return h;
+      return { data: next, past: [...h.past, h.data].slice(-HISTORY_MAX), future: rest, lastKey: null, lastAt: 0 };
+    }
+    case 'do': {
+      const data = reducer(h.data, ha.action);
+      if (data === h.data) return h;
+      if (NO_HISTORY.has(ha.action.type)) return { ...h, data };
+      const key = mergeKey(ha.action);
+      const merge = key !== null && key === h.lastKey && ha.at - h.lastAt < MERGE_MS && h.past.length > 0;
+      return {
+        data,
+        past: merge ? h.past : [...h.past, h.data].slice(-HISTORY_MAX),
+        future: [],
+        lastKey: key,
+        lastAt: ha.at,
+      };
+    }
+  }
+}
+
 /** Personen/Tage, die laut Profil arbeiten, in der Fassung aber fehlen. */
 export function missingCount(state: AppData, plan: AppData['plans']['geltend']): number {
   let n = 0;
@@ -176,6 +250,10 @@ export interface Store {
   takeTheirs: () => Promise<void>;
   /** Nach verlorenem Zugriff erneut verbinden und speichern */
   retry: () => Promise<void>;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export const serialize = (d: AppData) => toBackup(d);
@@ -183,7 +261,8 @@ const SAVE_DELAY = 500;
 const POLL_MS = 4000;
 
 export function useStore(initial: AppData, backend: Backend): Store {
-  const [data, dispatchRaw] = useReducer(reducer, initial);
+  const [hist, dispatchHist] = useReducer(historyReducer, initial, initHistory);
+  const data = hist.data;
   const [status, setStatus] = useState<SaveStatus>({ kind: 'saved', at: null });
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -260,7 +339,7 @@ export function useStore(initial: AppData, backend: Backend): Store {
     const res = parseBackup(text);
     if (typeof res === 'string') return false;
     lastText.current = serialize(res);
-    dispatchRaw({ type: 'replaceAll', data: res });
+    dispatchHist({ kind: 'load', data: res });
     return true;
   }, []);
 
@@ -334,7 +413,22 @@ export function useStore(initial: AppData, backend: Backend): Store {
     await doSave();
   }, [backend, doSave]);
 
-  const dispatch = useCallback((a: Action) => dispatchRaw(a), []);
+  const dispatch = useCallback((a: Action) => dispatchHist({ kind: 'do', action: a, at: Date.now() }), []);
+  const undo = useCallback(() => dispatchHist({ kind: 'undo' }), []);
+  const redo = useCallback(() => dispatchHist({ kind: 'redo' }), []);
   const clearNotice = useCallback(() => setNotice(null), []);
-  return { data, dispatch, status, notice, clearNotice, keepMine, takeTheirs, retry };
+  return {
+    data,
+    dispatch,
+    status,
+    notice,
+    clearNotice,
+    keepMine,
+    takeTheirs,
+    retry,
+    undo,
+    redo,
+    canUndo: hist.past.length > 0,
+    canRedo: hist.future.length > 0,
+  };
 }

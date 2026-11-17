@@ -45,7 +45,7 @@ function statusText(s: SaveStatus, backend: Backend): string {
 }
 
 export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
-  const { data, dispatch, status, notice, clearNotice, keepMine, takeTheirs, retry } = useStore(initial, backend);
+  const { data, dispatch, status, notice, clearNotice, keepMine, takeTheirs, retry, undo, redo, canUndo, canRedo } = useStore(initial, backend);
   const [view, setView] = useState<View>('plan');
   const [variant, setVariant] = useState<Variant>(data.plans.test ? 'test' : 'geltend');
   const [day, setDay] = useState<Day>('Di');
@@ -60,6 +60,32 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
     const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  const doUndo = useCallback(() => {
+    if (!canUndo) return;
+    undo();
+    setToast('Letzte Änderung rückgängig gemacht. Strg+Y stellt sie wieder her.');
+  }, [canUndo, undo]);
+  const doRedo = useCallback(() => {
+    if (!canRedo) return;
+    redo();
+    setToast('Änderung wiederhergestellt.');
+  }, [canRedo, redo]);
+  // Strg+Z / Strg+Y (Strg+Umschalt+Z); in Eingabefeldern bleibt das normale Text-Rückgängig
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k !== 'z' && k !== 'y') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.closest('input, textarea, select, [contenteditable="true"]') || t.closest('.drawer, dialog'))) return;
+      if (profile || confirmReq) return;
+      e.preventDefault();
+      if (k === 'y' || e.shiftKey) doRedo();
+      else doUndo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doUndo, doRedo, profile, confirmReq]);
   useEffect(() => {
     if (notice) {
       setToast(notice);
@@ -204,9 +230,19 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               <button className="pill sm" onClick={print}>Drucken / PDF</button>
               <button className="pill sm" onClick={exportCsv}>CSV (Excel)</button>
             </div>
+            <div className="head-status">
             <div className={`save-status ${statusTone}`} role="status" aria-live="polite" title={backend.label}>
               <span className="save-dot" aria-hidden="true" />
               {statusText(status, backend)}
+            </div>
+            <div className="undo-group" role="group" aria-label="Verlauf">
+              <button className="pill sm" onClick={doUndo} disabled={!canUndo} title="Rückgängig (Strg+Z)" aria-keyshortcuts="Control+Z">
+                ↶ Rückgängig
+              </button>
+              <button className="pill sm" onClick={doRedo} disabled={!canRedo} title="Wiederholen (Strg+Y)" aria-keyshortcuts="Control+Y" aria-label="Wiederholen">
+                ↷
+              </button>
+            </div>
             </div>
             <nav className="seg" aria-label="Ansicht">
               <button aria-pressed={view === 'plan'} onClick={() => setView('plan')}>Rahmenplan</button>

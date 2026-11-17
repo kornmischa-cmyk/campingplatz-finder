@@ -411,12 +411,21 @@ dialog.confirm-dialog p { font-size: 14px; margin: 0 0 8px; }
 
 /* Mitlaufender Wochenzähler an der Person: verplant / Soll */
 .soll { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.soll-bar { flex: 0 0 44px; height: 6px; border-radius: 999px; background: var(--line-2); overflow: hidden; }
-.soll-bar span { display: block; height: 100%; border-radius: 999px; background: var(--text-3); transition: width .15s ease-out; }
+.soll-days { display: inline-flex; align-items: center; gap: 3px; flex: none; }
+.wd { width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; cursor: pointer; }
+.wd-plan { background: var(--text-2); }
+.wd-extra { background: var(--text-2); box-shadow: 0 0 0 1.5px var(--h-dot); }
+.wd-missing { border: 2px solid var(--h-dot); background: transparent; }
+.wd-off { background: var(--line-2); transform: scale(.6); }
+.wd-today { outline: 1.5px solid var(--ink); outline-offset: 1.5px; }
+.wd-off.wd-today { outline-offset: 3px; }
 .soll-diff { font-weight: 700; border-radius: 999px; padding: 0 6px; line-height: 17px; }
 .soll-under .soll-diff { color: var(--text-2); background: var(--line); }
-.soll-ok .soll-bar span { background: var(--ok-dot); }
 .soll-ok .soll-diff { color: var(--ok-ink); background: var(--ok-bg); }
-.soll-over .soll-bar span { background: var(--h-dot); }
 .soll-over .soll-diff { color: var(--h-ink); background: var(--h-bg); }
-@media (prefers-reduced-motion: reduce) { .soll-bar span { transition: none; } }
+
+/* Rückgängig / Wiederholen */
+.head-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.undo-group { display: inline-flex; gap: 4px; }
+.undo-group .pill { padding: 4px 10px; }
+.undo-group .pill:disabled { opacity: .45; cursor: default; }

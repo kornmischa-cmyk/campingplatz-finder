@@ -204,6 +204,27 @@ describe('App (Smoke)', () => {
     expect(screen.queryByText('Abweichungen von der Normalarbeitszeit')).toBeNull();
   });
 
+  it('Strg+Z macht eine Verschiebung rückgängig, Strg+Y stellt sie wieder her', () => {
+    renderApp();
+    fireEvent.keyDown(screen.getByRole('button', { name: /^Tina, Betreuung, 07:00 bis 10:00/ }), { key: 'ArrowRight' });
+    expect(screen.getByRole('button', { name: /^Tina, Betreuung, 07:15 bis 10:15/ })).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
+    expect(screen.getByRole('button', { name: /^Tina, Betreuung, 07:00 bis 10:00/ })).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: 'y', ctrlKey: true });
+    expect(screen.getByRole('button', { name: /^Tina, Betreuung, 07:15 bis 10:15/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Rückgängig/ }));
+    expect(screen.getByRole('button', { name: /^Tina, Betreuung, 07:00 bis 10:00/ })).toBeTruthy();
+  });
+
+  it('Wochenpunkte zeigen Tage, die laut Profil noch nicht eingeplant sind', () => {
+    const d = emptyData();
+    const block = (start: number, end: number) => ({ id: `b${start}`, start, end, type: 'betreuung' as const, verb: 'weich' as const });
+    d.persons = [{ id: 'a', name: 'Anna', qual: 'Erzieherin', fk: true, groupId: 'g1', soll: 8, workdays: ['Mo', 'Mi'], normBlocks: [block(8, 12)], mentorId: '', notiz: '' }];
+    d.plans.test = { since: '', blocks: { a: { Mo: [block(8, 12)] } } };
+    renderApp(d);
+    expect(screen.getByText(/noch nicht eingeplant: Mi/)).toBeTruthy();
+  });
+
   it('Korrektur „arbeitet montags nicht“: Testfassung und auf Wunsch auch geltender Plan', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'Personal' }));

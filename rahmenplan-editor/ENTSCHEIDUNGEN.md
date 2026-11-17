@@ -37,7 +37,14 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 - **Wochenzähler an jeder Person (17.11.2026):** Unter dem Namen läuft „verplant / Soll h“ mit Balken und Differenz mit –
   auf jedem Tag, live beim Ziehen. Grau = noch offen, grün ✓ = Soll erreicht, gelb = über Soll. Kein Verstoß, reine Steuerungshilfe.
   Qualifikation und heutige Stunden stehen im Tooltip bzw. für Screenreader.
-- Offen: Rückgängig machen (Undo).
+- **Wochenpunkte Mo–Fr (17.11.2026)** ersetzen den Balken am Zähler (der Balken wiederholte nur die Zahlen):
+  gefüllt = eingeplant, gelber Ring = Arbeitstag laut Profil, aber noch nicht eingeplant, blass = frei,
+  gefüllt mit gelbem Rand = eingeplant, obwohl laut Profil kein Arbeitstag. Der aktuelle Tag ist umrandet; Klick springt zum Tag.
+- **Rückgängig/Wiederholen:** Strg+Z, Strg+Y bzw. Strg+Umschalt+Z und Knöpfe neben dem Speicherstatus. Bis zu 100 Schritte,
+  gilt für alle Änderungen (Plan, Personal, Einstellungen, Import). Ziehen und schnelles Tippen am selben Ding (innerhalb 1,2 s)
+  ergeben einen Schritt; Löschen, Pause einziehen usw. sind immer eigene Schritte. In Eingabefeldern und im offenen Profil
+  bleibt Strg+Z das normale Text-Rückgängig. Wird ein neuer Stand von außen geladen (andere Person), wird der Verlauf geleert.
+  Der Verlauf überlebt kein Neuladen der Seite.
 
 ## Profiländerungen wirken auf den Plan (15.11.2026)
 

@@ -30,6 +30,8 @@ interface Props {
   /** Befunde je Person (Tag + Woche) für das Abzeichen am Namen */
   personFindings: Record<string, Finding[]>;
   renderActions: (f: Finding) => ReactNode;
+  /** Klick auf einen Wochentag-Punkt am Zähler */
+  onDay?: (d: Day) => void;
 }
 
 interface DragState {
@@ -67,7 +69,7 @@ function blockLabel(b: Block, px: number): string {
   return b.type !== 'pause' && px >= s.length * CH ? s : '';
 }
 
-export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions }: Props) {
+export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay }: Props) {
   const [openBadge, setOpenBadge] = useState<string | null>(null);
   useEffect(() => {
     if (!openBadge) return;
@@ -193,7 +195,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && canEdit(blocks[idx], variant)) {
       e.preventDefault();
-      dispatch({ type: 'setTestDay', personId, day, blocks: deleteBlock(blocks, blocks[idx].id) });
+      dispatch({ type: 'setTestDay', personId, day, blocks: deleteBlock(blocks, blocks[idx].id), step: true });
       onSelect(null);
       return;
     }
@@ -267,7 +269,20 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                   : diff > 0
                     ? `${fmtDecimal(diff, 2)} Stunden über Soll`
                     : `noch ${fmtDecimal(-diff, 2)} Stunden offen`;
-              const meta = `${p.qual} · heute ${blocks.length ? `${fmtDecimal(az)} h` : 'frei'} · Woche ${fmtDecimal(ist, 2)} von ${fmtDecimal(p.soll, 2)} h verplant, ${sollSpoken}`;
+              const week = DAYS.map((d) => {
+                const bl = blocksOf(plan, p.id, d);
+                const soll = p.workdays.includes(d);
+                const state = bl.length ? (soll ? 'plan' : 'extra') : soll ? 'missing' : 'off';
+                const text =
+                  state === 'plan' || state === 'extra'
+                    ? `${d}: ${fmt(Math.min(...bl.map((b) => b.start)))}–${fmt(Math.max(...bl.map((b) => b.end)))}, ${fmtDecimal(workHours(bl))} h${state === 'extra' ? ' (laut Profil kein Arbeitstag)' : ''}`
+                    : state === 'missing'
+                      ? `${d}: Arbeitstag, noch nicht eingeplant`
+                      : `${d}: frei`;
+                return { d, state, text };
+              });
+              const missingDays = week.filter((w) => w.state === 'missing').map((w) => w.d);
+              const meta = `${p.qual} · heute ${blocks.length ? `${fmtDecimal(az)} h` : 'frei'} · Woche ${fmtDecimal(ist, 2)} von ${fmtDecimal(p.soll, 2)} h verplant, ${sollSpoken}${missingDays.length ? ` · noch nicht eingeplant: ${missingDays.join(', ')}` : ''}`;
               return (
                 <div className="person-row" key={p.id}>
                   <div className="person-cell">
@@ -306,8 +321,15 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                         })()}
                       </div>
                       <div className={`soll soll-${sollTone}`} title={meta}>
-                        <span className="soll-bar" aria-hidden="true">
-                          <span style={{ width: `${Math.min(100, p.soll ? (ist / p.soll) * 100 : 0)}%` }} />
+                        <span className="soll-days" aria-hidden="true">
+                          {week.map((w) => (
+                            <span
+                              key={w.d}
+                              className={`wd wd-${w.state}${w.d === day ? ' wd-today' : ''}`}
+                              title={w.text}
+                              onClick={onDay ? () => onDay(w.d) : undefined}
+                            />
+                          ))}
                         </span>
                         <span className="soll-num" aria-hidden="true">
                           {fmtDecimal(ist, ist % 1 ? 2 : 0)} / {fmtDecimal(p.soll, p.soll % 1 ? 2 : 0)} h
@@ -348,7 +370,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                           const from = p.normBlocks.length ? Math.min(...p.normBlocks.map((b) => b.start)) : open;
                           const next = addBlockAfter([], from, open, close, id, 4);
                           if (!next) return;
-                          dispatch({ type: 'setTestDay', personId: p.id, day, blocks: next });
+                          dispatch({ type: 'setTestDay', personId: p.id, day, blocks: next, step: true });
                           onSelect({ personId: p.id, day, blockId: id });
                         }}
                       >
