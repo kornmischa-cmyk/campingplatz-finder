@@ -99,3 +99,15 @@ describe('CSV', () => {
     expect(csv).toContain('"A;B"');
   });
 });
+
+import { viewRange as vr } from './plan';
+describe('Sichtbarer Zeitraum', () => {
+  it('bleibt bei der Öffnungszeit, wenn alles drin liegt', () => {
+    expect(vr(7, 16.5, { since: '', blocks: { a: { Mo: [{ id: 'x', start: 8, end: 12, type: 'betreuung', verb: 'weich' }] } } }, 'Mo', [])).toEqual({ v0: 7, v1: 16.5 });
+  });
+  it('wird bis zum Ende eines Abendtermins (volle Stunde) verlängert', () => {
+    const t = { id: 't', name: 'DB', type: 'besprechung' as const, day: 'Di' as const, start: 19, end: 20.75, teilnehmer: 'alle' as const };
+    expect(vr(7, 16.5, { since: '', blocks: {} }, 'Di', [t])).toEqual({ v0: 7, v1: 21 });
+    expect(vr(7, 16.5, { since: '', blocks: {} }, 'Mo', [t])).toEqual({ v0: 7, v1: 16.5 });
+  });
+});

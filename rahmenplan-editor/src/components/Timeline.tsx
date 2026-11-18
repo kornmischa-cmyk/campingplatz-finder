@@ -40,6 +40,8 @@ interface Props {
   /** Klick auf einen Wochentag-Punkt am Zähler */
   onDay?: (d: Day) => void;
   flash?: Flash | null;
+  /** Sichtbarer Zeitraum (Öffnungszeit, ggf. erweitert um Termine davor/danach) */
+  view: { v0: number; v1: number };
 }
 
 interface DragState {
@@ -101,7 +103,7 @@ export function blockLabel(b: Block, px: number): string {
   return cands.find((c) => px >= c.length * CH + pad) ?? '';
 }
 
-export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay, flash }: Props) {
+export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay, flash, view }: Props) {
   const [openBadge, setOpenBadge] = useState<string | null>(null);
   useEffect(() => {
     if (!openBadge) return;
@@ -121,9 +123,11 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
     };
   }, [openBadge]);
   const { settings } = data;
+  // Bearbeiten nur innerhalb der Öffnungszeit; angezeigt wird der ganze sichtbare Zeitraum
   const { open, close } = settings;
-  const span = close - open;
-  const pct = (h: number) => ((h - open) / span) * 100;
+  const { v0, v1 } = view;
+  const span = v1 - v0;
+  const pct = (h: number) => ((h - v0) / span) * 100;
 
   const [laneW, setLaneW] = useState(560);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -167,7 +171,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
   const [draw, setDraw] = useState<DrawState | null>(null);
   const drawRef = useRef<DrawState | null>(null);
   drawRef.current = draw;
-  const hourAt = (clientX: number, left: number, width: number) => open + ((clientX - left) / width) * span;
+  const hourAt = (clientX: number, left: number, width: number) => v0 + ((clientX - left) / width) * span;
 
   useEffect(() => {
     if (!draw) return;
@@ -248,13 +252,13 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
   };
 
   const ticks: number[] = [];
-  for (let h = Math.ceil(open); h <= close; h++) ticks.push(h);
-  if (ticks[0] !== open) ticks.unshift(open);
-  if (ticks[ticks.length - 1] !== close) {
+  for (let h = Math.ceil(v0); h <= v1; h++) ticks.push(h);
+  if (ticks[0] !== v0) ticks.unshift(v0);
+  if (ticks[ticks.length - 1] !== v1) {
     // Volle Stunde direkt vor dem Schluss weglassen, wenn die Beschriftungen sonst kollidieren
     const pxPerH = laneW / span;
-    if ((close - ticks[ticks.length - 1]) * pxPerH < 46) ticks.pop();
-    ticks.push(close);
+    if ((v1 - ticks[ticks.length - 1]) * pxPerH < 46) ticks.pop();
+    ticks.push(v1);
   }
 
   return (
@@ -304,6 +308,23 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
       )}
 
       <div className="tl-body">
+      {[
+        v0 < open ? { a: v0, b: open } : null,
+        v1 > close ? { a: close, b: v1 } : null,
+      ]
+        .filter((x): x is { a: number; b: number } => !!x)
+        .map((x) => (
+          <div
+            key={x.a}
+            className="closed-band"
+            aria-hidden="true"
+            title={`Außerhalb der Öffnungszeit (${fmt(open)}–${fmt(close)})`}
+            style={{
+              left: `calc(var(--label-w) + (100% - var(--label-w)) * ${pct(x.a) / 100})`,
+              width: `calc((100% - var(--label-w)) * ${(x.b - x.a) / span})`,
+            }}
+          />
+        ))}
       {mergeSpans(result.violationSpans).map((s, i) => (
         <div
           key={i}
@@ -391,6 +412,12 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                         })()}
                       </div>
                       <div className={`soll soll-${sd.tone}`} title={meta}>
+                        <span className="soll-line" aria-hidden="true">
+                          <span className="soll-num">
+                            {fmtHours(ist)} / {fmtHours(p.soll)} h
+                          </span>
+                          <span className="soll-diff">{sd.chip}</span>
+                        </span>
                         <span className="soll-days" aria-hidden="true">
                           {week.map((w) => (
                             <span
@@ -401,10 +428,6 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                             />
                           ))}
                         </span>
-                        <span className="soll-num" aria-hidden="true">
-                          {fmtHours(ist)} / {fmtHours(p.soll)} h
-                        </span>
-                        <span className="soll-diff" aria-hidden="true">{sd.chip}</span>
                         <span className="visually-hidden">{meta}</span>
                       </div>
                     </div>

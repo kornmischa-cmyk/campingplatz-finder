@@ -3,6 +3,7 @@ import type { AppData, Day, Termin, TerminTyp } from '../domain/types';
 import { DAYS, TYPE_LABEL } from '../domain/types';
 import { fmt, STEP, uid } from '../domain/time';
 import { groupedPersons } from '../domain/groups';
+import { TERMIN_MAX, TERMIN_MIN } from '../domain/plan';
 import type { Action } from '../state/store';
 import type { ConfirmRequest } from './ConfirmDialog';
 
@@ -29,8 +30,10 @@ function TerminForm({ data, initial, onSave, onCancel }: { data: AppData; initia
   const [tried, setTried] = useState(false);
   const id = useId();
   const { open, close } = data.settings;
+  const ausserhalb = t.start < open - 1e-9 || t.end > close + 1e-9;
   const times: number[] = [];
-  for (let h = open; h <= close + 1e-9; h += STEP) times.push(Math.round(h * 4) / 4);
+  // Termine auch vor/nach der Öffnungszeit (z. B. Abendbesprechung bis 22 Uhr)
+  for (let h = TERMIN_MIN; h <= TERMIN_MAX + 1e-9; h += STEP) times.push(Math.round(h * 4) / 4);
   const auswahl = t.teilnehmer === 'alle' ? null : t.teilnehmer;
   const errors = [
     !t.name.trim() && 'Bitte eine Bezeichnung eingeben.',
@@ -78,6 +81,11 @@ function TerminForm({ data, initial, onSave, onCancel }: { data: AppData; initia
         </div>
       </div>
 
+      {ausserhalb && (
+        <p className="hint" style={{ margin: '8px 0 0' }}>
+          Liegt außerhalb der Öffnungszeit ({fmt(open)}–{fmt(close)}). Die Zeitleiste wird an diesem Tag entsprechend verlängert.
+        </p>
+      )}
       <fieldset className="teilnehmer">
         <legend className="field-label">Wer nimmt teil?</legend>
         <label className="check">

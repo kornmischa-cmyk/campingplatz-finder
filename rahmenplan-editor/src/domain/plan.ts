@@ -172,3 +172,28 @@ export function applyProfileToPlan(plan: Plan, oldP: Person | null, newP: Person
   }
   return out;
 }
+
+/** Früheste/späteste wählbare Uhrzeit für Termine (auch außerhalb der Öffnungszeit, z. B. Abendbesprechung) */
+export const TERMIN_MIN = 6;
+export const TERMIN_MAX = 22;
+
+/**
+ * Sichtbarer Zeitraum eines Tages: die Öffnungszeit, erweitert auf volle Stunden,
+ * wenn Blöcke oder Termine davor oder danach liegen.
+ */
+export function viewRange(open: number, close: number, plan: Plan, day: Day, termine: Termin[]): { v0: number; v1: number } {
+  let lo = open;
+  let hi = close;
+  for (const days of Object.values(plan.blocks)) {
+    for (const b of days[day] ?? []) {
+      lo = Math.min(lo, b.start);
+      hi = Math.max(hi, b.end);
+    }
+  }
+  for (const t of termine) {
+    if (t.day !== day) continue;
+    lo = Math.min(lo, t.start);
+    hi = Math.max(hi, t.end);
+  }
+  return { v0: lo < open - EPS ? Math.floor(lo + EPS) : open, v1: hi > close + EPS ? Math.ceil(hi - EPS) : close };
+}

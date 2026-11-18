@@ -1,6 +1,6 @@
 import type { AppData } from '../domain/types';
 import { DAYS, TYPE_LABEL } from '../domain/types';
-import { blocksOf } from '../domain/plan';
+import { blocksOf, viewRange } from '../domain/plan';
 import { weekTable } from '../domain/rules';
 import { groupColor, groupedPersons } from '../domain/groups';
 import { fmt, fmtDecimal, fmtShort } from '../domain/time';
@@ -11,10 +11,13 @@ import { dienstTage } from '../domain/dienste';
 export function PrintView({ data }: { data: AppData }) {
   const plan = data.plans.geltend;
   const { open, close, kitaName } = data.settings;
-  const span = close - open;
-  const pct = (h: number) => ((h - open) / span) * 100;
-  const ticks: number[] = [];
-  for (let h = Math.ceil(open); h <= close; h++) ticks.push(h);
+  /** Maßstab je Tag: Öffnungszeit, bei Abendterminen verlängert */
+  const scale = (d: (typeof DAYS)[number]) => {
+    const { v0, v1 } = viewRange(open, close, plan, d, data.termine);
+    const ticks: number[] = [];
+    for (let h = Math.ceil(v0); h <= v1; h++) ticks.push(h);
+    return { span: v1 - v0, pct: (h: number) => ((h - v0) / (v1 - v0)) * 100, ticks };
+  };
   const groups = groupedPersons(data).filter((g) => g.members.length);
 
   return (
@@ -34,7 +37,9 @@ export function PrintView({ data }: { data: AppData }) {
         ))}
       </div>
 
-      {DAYS.map((d) => (
+      {DAYS.map((d) => {
+        const { span, pct, ticks } = scale(d);
+        return (
         <div className="pr-day" key={d}>
           <h2>{d}</h2>
           <div className="pr-row">
@@ -72,7 +77,8 @@ export function PrintView({ data }: { data: AppData }) {
             }),
           )}
         </div>
-      ))}
+        );
+      })}
 
       <div className="pr-week">
         <h2 style={{ font: '700 15px/1.1 var(--head)' }}>Wochenübersicht</h2>

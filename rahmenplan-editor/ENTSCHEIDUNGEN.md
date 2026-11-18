@@ -19,6 +19,15 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Abendtermine, Zähler, Auswahllisten (18.11.2026)
+
+- **Termine 6:00–22:00:** wählbar auch außerhalb der Öffnungszeit (Hinweis im Formular). An Tagen mit solchen Terminen
+  reicht die Zeitleiste bis zur vollen Stunde nach dem Termin; die Zeit außerhalb der Öffnungszeit ist schraffiert „geschlossen“.
+  Besetzung und Regeln gelten weiter nur in der Öffnungszeit; Zeitfenster aufziehen ebenfalls nur dort. Druck nutzt denselben Maßstab je Tag.
+- **Wochenzähler zweizeilig:** oben „25:30 / 28:30 h · noch 3:00“, darunter die Punkte. Lange Werte ragten vorher in die Zeitleiste;
+  Punkte mit 6 px Abstand, der Ring des aktuellen Tags berührt die Nachbarn nicht mehr. Zeilenhöhe 64 px.
+- **Auswahllisten:** eigener Pfeil mit 12 px Abstand zum Rand (vorher klebte der Browser-Pfeil am Rand).
+
 ## Linien in der Zeitleiste (17.11.2026)
 
 - Aneinanderstoßende Blöcke hatten bis zu vier senkrechte Linien an einer Stelle (Griff, Rand, Rand, Griff).

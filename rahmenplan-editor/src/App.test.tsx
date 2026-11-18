@@ -138,6 +138,20 @@ describe('App (Smoke)', () => {
     expect(screen.getByText('Tina: 5× Frühdienst (höchstens 2×)')).toBeTruthy();
   });
 
+  it('Abendtermin bis 22 Uhr: wählbar, als Block im Plan, Zeitleiste verlängert', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Termin' }));
+    fireEvent.change(screen.getByLabelText('Bezeichnung'), { target: { value: 'Elternabend' } });
+    fireEvent.change(screen.getByLabelText('Beginn'), { target: { value: '19' } });
+    fireEvent.change(screen.getByLabelText('Ende'), { target: { value: '22' } });
+    expect(screen.getByText(/Liegt außerhalb der Öffnungszeit/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Termin speichern' }));
+    expect(screen.getByRole('img', { name: /^Selin, Dienstbesprechung, 19:00 bis 22:00/ })).toBeTruthy();
+    expect(document.querySelector('.closed-band')).toBeTruthy();
+    expect(screen.getAllByText('22:00').length).toBeGreaterThan(0);
+  });
+
   it('Termin für alle anlegen: zusätzlicher Block in der Testfassung', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));

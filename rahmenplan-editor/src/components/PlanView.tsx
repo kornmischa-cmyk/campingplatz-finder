@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AppData, Day, Variant } from '../domain/types';
 import { DAYS, TYPE_LABEL, type Block, type BlockType } from '../domain/types';
 import { evaluateDay, fkShort, totShort, weekTable, type DayResult, type Finding } from '../domain/rules';
-import { blocksOf, sameDay, templateFor } from '../domain/plan';
+import { blocksOf, sameDay, templateFor, viewRange } from '../domain/plan';
 import { applyDrag, canDrag, isLocked, planDrag, type DragMode } from '../domain/drag';
 import { fmt, fmtDuration, fmtShort, STEP, uid } from '../domain/time';
 import { addBlockAfter, canEdit, deleteBlock, EDIT_TYPES, insertPauseIn, setBlockType, suggestedPause } from '../domain/edit';
@@ -241,6 +241,9 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
     h?.focus({ preventScroll: true });
   };
   const span = settings.close - settings.open;
+  // Sichtbarer Zeitraum des Tages (bei Terminen außerhalb der Öffnungszeit länger)
+  const view = viewRange(settings.open, settings.close, plan, day, data.termine);
+  const vSpan = view.v1 - view.v0;
   const pct = (h: number) => ((h - settings.open) / span) * 100;
   const randText = settings.randzeiten.map((r) => `${fmtShort(r.start)}–${fmtShort(r.end)} mind. ${r.minPersonen}`).join(', ');
 
@@ -426,6 +429,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
               personFindings={personFindings}
               renderActions={(f) => actionsFor(f, true)}
               flash={flash}
+              view={view}
               onDay={(d) => {
                 setDay(d);
                 select(null);
@@ -438,6 +442,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                 <div className="cov-explain">Wie viele Personen gerade betreuen. Der dunkle Teil sind Fachkräfte.</div>
               </div>
               <div>
+                <div style={{ marginLeft: `${((settings.open - view.v0) / vSpan) * 100}%`, width: `${(span / vSpan) * 100}%` }}>
                 <div className="bars" role="img" aria-label={`Besetzung je volle Stunde (Personen in Betreuung, davon Fachkräfte): ${covHours.map((x) => `${fmtShort(x.h)} Uhr ${x.label.replace(' / ', ', davon ')}`).join('; ')}`}>
                   {result.slots.map((s) => {
                     const badT = totShort(s, settings);
@@ -455,6 +460,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
                   {covHours.map((x) => (
                     <span key={x.h} style={{ left: `${pct(x.h)}%`, width: `${(Math.min(1, settings.close - x.h) / span) * 100}%` }}>{x.label}</span>
                   ))}
+                </div>
                 </div>
                 <div className="legend" style={{ marginTop: 6 }}>
                   <span><i className="sw" style={{ background: 'var(--cov)' }} />Personen</span>
