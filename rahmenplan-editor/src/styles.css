@@ -550,3 +550,16 @@ select.input.sm { padding-left: 10px; padding-right: 30px; background-position: 
 .abw-tag.abs-fortbildung { background: #e8e3f5; color: #5d4c94; }
 .abw-tag.abs-krank, .abw-tag.abs-sonstiges { background: var(--line); color: var(--text-2); }
 .drawer-abw { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+
+/* Schließzeiten, Feiertage, geschlossene Tage */
+.sub-h { font: 700 15px/1.2 var(--head); margin: 20px 0 8px; }
+.sz-row { flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+details.feiertage { margin: 8px 0; font-size: 13.5px; }
+details.feiertage summary { cursor: pointer; color: #b0532a; text-decoration: underline; text-underline-offset: 2px; }
+details.feiertage ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.chip-closed { background: var(--line); color: var(--text-2); }
+.closed-card { text-align: center; padding: 40px 24px; background: repeating-linear-gradient(135deg, #fff 0 10px, #faf6f0 10px 20px); }
+.closed-card h2 { font: 700 22px/1.2 var(--head); margin: 0 0 8px; }
+.closed-card p { margin: 0; color: var(--text-2); }
+.pr-closed { font-size: 14px; font-weight: 600; padding: 12px 0; }
+.pr-abs { background: #f3eee8 !important; border: 1px dashed #9c8a72 !important; color: #5f564c; }

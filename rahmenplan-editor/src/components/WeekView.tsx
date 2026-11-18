@@ -6,7 +6,6 @@ import { evaluateDay, type DayResult } from '../domain/rules';
 import { viewRange, TERMIN_MAX, TERMIN_MIN } from '../domain/plan';
 import {
   abwesenheitFehler,
-  abwesenheitenAm,
   addDays,
   fmtDatum,
   fmtTag,
@@ -15,9 +14,9 @@ import {
   kalenderwoche,
   mondayOf,
   weekDates,
-  wochenPlan,
 } from '../domain/abwesenheit';
 import { fmt, STEP, uid } from '../domain/time';
+import { berechneWoche } from '../domain/woche';
 import { groupedPersons } from '../domain/groups';
 import { fmtDate } from '../lib/download';
 import type { Action } from '../state/store';
@@ -34,6 +33,9 @@ interface Props {
   confirm: (r: ConfirmRequest) => void;
   onOpenProfile: (personId: string, opener: HTMLElement) => void;
   notify: (msg: string) => void;
+  /** Montag der angezeigten Woche (liegt in App, damit Drucken/CSV im Kopf die Woche kennen) */
+  monday: string;
+  setMonday: (m: string) => void;
 }
 
 function AbwesenheitForm({ data, initial, onSave, onCancel }: { data: AppData; initial: Abwesenheit; onSave: (a: Abwesenheit) => void; onCancel: () => void }) {
@@ -160,16 +162,15 @@ export function abwesenheitText(a: Abwesenheit): string {
   return `${ABWESENHEIT_LABEL[a.art]} · ${zeit}${istGanztaegig(a) ? '' : `, ${fmt(a.start!)}–${fmt(a.end!)}`}`;
 }
 
-export function WeekView({ data, dispatch, confirm, onOpenProfile, notify }: Props) {
+export function WeekView({ data, dispatch, confirm, onOpenProfile, notify, monday, setMonday }: Props) {
   const heute = isoDate(new Date());
-  const [monday, setMonday] = useState(() => mondayOf(heute));
-  const dates = weekDates(monday);
+  const woche = useMemo(() => berechneWoche(data, monday), [data, monday]);
+  const { dates, plan, geschlossen } = woche;
   const heuteDay = DAYS.find((d) => dates[d] === heute);
   const [day, setDay] = useState<Day>(heuteDay ?? 'Mo');
   const [editing, setEditing] = useState<Abwesenheit | null>(null);
   const { persons, settings } = data;
 
-  const plan = useMemo(() => wochenPlan(data.plans.geltend, monday, data.abwesenheiten), [data.plans.geltend, monday, data.abwesenheiten]);
   const results = useMemo(() => {
     const r = {} as Record<Day, DayResult>;
     for (const d of DAYS) r[d] = evaluateDay(persons, plan, d, settings, data.termine, { ohneAbweichung: true });
@@ -177,22 +178,16 @@ export function WeekView({ data, dispatch, confirm, onOpenProfile, notify }: Pro
   }, [persons, plan, settings, data.termine]);
   const result = results[day];
 
-  const abwesendHeute = useMemo(() => {
-    const m: Record<string, Abwesenheit[]> = {};
-    for (const p of persons) {
-      const l = abwesenheitenAm(p.id, dates[day], data.abwesenheiten);
-      if (l.length) m[p.id] = l;
-    }
-    return m;
-  }, [persons, dates, day, data.abwesenheiten]);
+  const abwesendHeute = woche.abwesend[day];
+  const zuHeute = geschlossen[day];
   const wocheAbwesend = useMemo(() => {
     const m: Record<string, Day[]> = {};
     for (const p of persons) {
-      const tage = DAYS.filter((d) => abwesenheitenAm(p.id, dates[d], data.abwesenheiten).some(istGanztaegig));
+      const tage = DAYS.filter((d) => (woche.abwesend[d][p.id] ?? []).some(istGanztaegig));
       if (tage.length) m[p.id] = tage;
     }
     return m;
-  }, [persons, dates, data.abwesenheiten]);
+  }, [persons, woche]);
 
   const personFindings = useMemo(() => {
     const m: Record<string, typeof result.findings> = {};
@@ -263,29 +258,43 @@ export function WeekView({ data, dispatch, confirm, onOpenProfile, notify }: Pro
       <div className="days" role="group" aria-label="Wochentag">
         {DAYS.map((d) => {
           const dc = results[d].counts;
-          const n = persons.filter((p) => abwesenheitenAm(p.id, dates[d], data.abwesenheiten).length).length;
+          const n = Object.keys(woche.abwesend[d]).length;
+          const zu = geschlossen[d];
           return (
             <button
               key={d}
               className="day-card"
               aria-pressed={day === d}
-              aria-label={`${DAY_FULL[d]}, ${fmtDatum(dates[d])}: ${statusShort(dc)}${n ? `, ${n} abwesend` : ''}`}
+              aria-label={`${DAY_FULL[d]}, ${fmtDatum(dates[d])}: ${zu ? `geschlossen, ${zu.name}` : statusShort(dc)}${n ? `, ${n} abwesend` : ''}`}
               onClick={() => setDay(d)}
             >
               <span className="day-name">
                 {d} {fmtTag(dates[d])}
                 {dates[d] === heute && <span className="today-tag">heute</span>}
               </span>
-              <span className={`chip tone-${tone(dc)}`}>
-                <span className="dot" />
-                {statusShort(dc)}
-              </span>
-              {n > 0 && <span className="abs-count">{n} abwesend</span>}
+              {zu ? (
+                <span className="chip chip-closed">geschlossen</span>
+              ) : (
+                <span className={`chip tone-${tone(dc)}`}>
+                  <span className="dot" />
+                  {statusShort(dc)}
+                </span>
+              )}
+              {zu ? <span className="abs-count">{zu.name}</span> : n > 0 && <span className="abs-count">{n} abwesend</span>}
             </button>
           );
         })}
       </div>
 
+      {zuHeute ? (
+        <section className="card closed-card" aria-live="polite">
+          <h2>{DAY_FULL[day]}, {fmtDatum(dates[day])}: Kita geschlossen</h2>
+          <p>
+            {zuHeute.art === 'feiertag' ? `Gesetzlicher Feiertag (Hessen): ${zuHeute.name}.` : `Schließzeit: ${zuHeute.name}.`} An diesem Tag ist niemand eingeplant.
+          </p>
+        </section>
+      ) : (
+      <>
       <section className="card plan-card" aria-labelledby="woche-title">
         <h2 id="woche-title" className="visually-hidden">Besetzung am {DAY_FULL[day]}, {fmtDatum(dates[day])}</h2>
         <div className="plan-toolbar">
@@ -353,6 +362,9 @@ export function WeekView({ data, dispatch, confirm, onOpenProfile, notify }: Pro
           </div>
         ))}
       </div>
+
+      </>
+      )}
 
       <h2 className="h2">Abwesenheiten</h2>
       {aktuell.length === 0 ? (

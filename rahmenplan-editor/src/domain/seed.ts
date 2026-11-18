@@ -85,6 +85,8 @@ export function defaultSettings(): Settings {
     maxAmStueck: 6,
     hinweisArbeitszeit: 8,
     showPausenstaffel: true,
+    schliesszeiten: [],
+    feiertage: 'HE',
   };
 }
 

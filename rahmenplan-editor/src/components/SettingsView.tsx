@@ -1,6 +1,10 @@
 import { useEffect, useId, useState } from 'react';
 import { ChevronDown, ChevronUp } from './Icons';
-import type { AppData, Group, Settings } from '../domain/types';
+import type { AppData, Group, Schliesszeit, Settings } from '../domain/types';
+import { naechsteFeiertage } from '../domain/kalender';
+import { fmtDatum, isoDate, parseIso } from '../domain/abwesenheit';
+
+const wochentag = (iso: string) => ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][parseIso(iso).getDay()];
 import { fmt, STEP, uid } from '../domain/time';
 import type { Action } from '../state/store';
 import { fmtDate } from '../lib/download';
@@ -40,6 +44,7 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
   const set = (patch: Partial<Settings>) => dispatch({ type: 'setSettings', patch });
   const setGroups = (groups: Group[]) => dispatch({ type: 'setGroups', groups });
   const fid = useId();
+  const heute = isoDate(new Date());
   const [focusGroup, setFocusGroup] = useState<string | null>(null);
   useEffect(() => {
     if (!focusGroup) return;
@@ -110,6 +115,57 @@ export function SettingsView({ data, dispatch, onBackup, onImport, onLoadSample,
         >
           + Gruppe hinzufügen
         </button>
+      </div>
+
+      <div className="card">
+        <h2>Schließzeiten und Feiertage</h2>
+        <p className="hint" style={{ marginTop: 0 }}>
+          An diesen Tagen ist die Kita zu: In der Ansicht „Woche“ ist dann niemand eingeplant und es gibt keine Regelprüfung.
+        </p>
+        <h3 className="sub-h">Schließzeiten</h3>
+        {s.schliesszeiten.length === 0 && <p className="hint">Noch keine Schließzeiten eingetragen.</p>}
+        {[...s.schliesszeiten]
+          .sort((x, y) => x.von.localeCompare(y.von))
+          .map((z) => {
+            const upd = (patch: Partial<Schliesszeit>) => set({ schliesszeiten: s.schliesszeiten.map((x) => (x.id === z.id ? { ...x, ...patch } : x)) });
+            const vorbei = z.bis < heute;
+            return (
+              <div className="list-row sz-row" key={z.id}>
+                <input className="input" style={{ flex: '1 1 220px' }} aria-label="Bezeichnung der Schließzeit" placeholder="z. B. Sommerschließung" value={z.name} onChange={(e) => upd({ name: e.target.value })} />
+                <input type="date" className="input" style={{ width: 170 }} aria-label={`${z.name || 'Schließzeit'}: von`} value={z.von} onChange={(e) => upd({ von: e.target.value, bis: z.bis < e.target.value ? e.target.value : z.bis })} />
+                <span aria-hidden="true">–</span>
+                <input type="date" className="input" style={{ width: 170 }} aria-label={`${z.name || 'Schließzeit'}: bis`} value={z.bis} min={z.von} onChange={(e) => upd({ bis: e.target.value })} />
+                {vorbei && <span className="hint">vorbei</span>}
+                <button className="linkbtn danger" onClick={() => set({ schliesszeiten: s.schliesszeiten.filter((x) => x.id !== z.id) })}>Entfernen</button>
+              </div>
+            );
+          })}
+        <button
+          className="pill sm"
+          style={{ marginTop: 8 }}
+          onClick={() => set({ schliesszeiten: [...s.schliesszeiten, { id: uid('sz'), name: '', von: heute, bis: heute }] })}
+        >
+          + Schließzeit
+        </button>
+
+        <h3 className="sub-h">Gesetzliche Feiertage</h3>
+        <label className="check">
+          <input type="checkbox" checked={s.feiertage === 'HE'} onChange={(e) => set({ feiertage: e.target.checked ? 'HE' : 'keine' })} />
+          Feiertage in Hessen automatisch berücksichtigen
+        </label>
+        {s.feiertage === 'HE' && (
+          <details className="feiertage">
+            <summary>Nächste Feiertage anzeigen</summary>
+            <ul>
+              {naechsteFeiertage(heute, 12).map((f) => (
+                <li key={f.datum}>
+                  <span className="abw-zeit">{wochentag(f.datum)}, {fmtDatum(f.datum)}</span> {f.name}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        <p className="hint">Heiligabend und Silvester sind keine gesetzlichen Feiertage – bei Bedarf als Schließzeit eintragen.</p>
       </div>
 
       <div className="card">

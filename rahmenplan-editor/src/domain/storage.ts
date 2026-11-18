@@ -133,7 +133,7 @@ export function parseBackup(text: string): AppData | string {
   return {
     version: 1,
     // fehlende (neuere) Einstellungen mit Standardwerten auffüllen
-    settings: { ...defaultSettings(), ...(s as Partial<AppData['settings']>) },
+    settings: sanitizeSettings({ ...defaultSettings(), ...(s as Partial<AppData['settings']>) }),
     groups: obj.groups as AppData['groups'],
     persons: migrated.persons,
     termine: migrated.termine,
@@ -151,6 +151,15 @@ export function parseBackup(text: string): AppData | string {
  * gleiche Besprechungs-/Anleitungs-/Verfügungsblöcke mehrerer Personen werden ein gemeinsamer Termin;
  * nehmen alle teil, die dienstags arbeiten, gilt der Termin für „alle“.
  */
+/** Neuere Einstellungen prüfen; Beschädigtes wird verworfen statt den Import zu blockieren */
+function sanitizeSettings(st: AppData['settings']): AppData['settings'] {
+  const isDate = (x: unknown) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+  const sz = Array.isArray(st.schliesszeiten)
+    ? st.schliesszeiten.filter((z) => isObj(z) && isStr(z.id) && isStr(z.name) && isDate(z.von) && isDate(z.bis))
+    : [];
+  return { ...st, schliesszeiten: sz, feiertage: st.feiertage === 'keine' ? 'keine' : 'HE' };
+}
+
 export function migrateTueBlocks(persons: Person[], termine: Termin[]): { persons: Person[]; termine: Termin[] } {
   if (!persons.some((p) => p.tueBlocks)) return { persons, termine };
   const groups = new Map<string, { type: TerminTyp; start: number; end: number; ids: string[] }>();

@@ -99,6 +99,18 @@ export interface Settings {
   besprechungsTag?: Day | '';
   /** Pausenstaffel-Tabelle im Plan zeigen */
   showPausenstaffel: boolean;
+  /** Feste Schließzeiten der Kita (z. B. Sommerschließung, Brückentage) */
+  schliesszeiten: Schliesszeit[];
+  /** Gesetzliche Feiertage berücksichtigen (bisher nur Hessen) */
+  feiertage: 'HE' | 'keine';
+}
+
+/** Schließzeit mit Datum (ISO „JJJJ-MM-TT“, beide Tage einschließlich) */
+export interface Schliesszeit {
+  id: string;
+  name: string;
+  von: string;
+  bis: string;
 }
 
 /** Termin im Rahmenplan, z. B. Dienstbesprechung oder Anleitergespräch */

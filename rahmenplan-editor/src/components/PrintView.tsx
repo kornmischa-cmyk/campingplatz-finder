@@ -1,15 +1,20 @@
 import type { AppData } from '../domain/types';
+import { ABWESENHEIT_LABEL } from '../domain/types';
+import { berechneWoche } from '../domain/woche';
+import { fmtDatum, fmtTag, istGanztaegig, kalenderwoche } from '../domain/abwesenheit';
+import { fmtHours } from '../domain/soll';
 import { DAYS, TYPE_LABEL } from '../domain/types';
 import { blocksOf, viewRange } from '../domain/plan';
 import { weekTable } from '../domain/rules';
 import { groupColor, groupedPersons } from '../domain/groups';
-import { fmt, fmtDecimal, fmtShort } from '../domain/time';
+import { fmt, fmtShort } from '../domain/time';
 import { fmtDate } from '../lib/download';
 import { dienstTage } from '../domain/dienste';
 
-/** Druckansicht des GELTENDEN Plans (nur im Druck sichtbar). */
-export function PrintView({ data }: { data: AppData }) {
-  const plan = data.plans.geltend;
+/** Druckansicht (nur im Druck sichtbar): geltender Rahmenplan oder – mit `week` – eine konkrete Kalenderwoche. */
+export function PrintView({ data, week }: { data: AppData; week?: string }) {
+  const w = week ? berechneWoche(data, week) : null;
+  const plan = w ? w.plan : data.plans.geltend;
   const { open, close, kitaName } = data.settings;
   /** Maßstab je Tag: Öffnungszeit, bei Abendterminen verlängert */
   const scale = (d: (typeof DAYS)[number]) => {
@@ -23,9 +28,10 @@ export function PrintView({ data }: { data: AppData }) {
   return (
     <div className="print-only" aria-hidden="true">
       <div className="pr-head">
-        <h1>Rahmenplan · {kitaName}</h1>
+        <h1>{w ? `Wochenplan KW ${kalenderwoche(w.monday)} · ${fmtTag(w.dates.Mo)}–${fmtDatum(w.dates.Fr)}` : 'Rahmenplan'} · {kitaName}</h1>
         <div className="sub">
-          Geltender Plan seit {fmtDate(plan.since)} · Öffnung Mo–Fr {fmt(open)}–{fmt(close)} · gedruckt am {fmtDate(new Date().toISOString())}
+          {w ? 'Geltender Rahmenplan mit Abwesenheiten, Feiertagen und Schließzeiten' : `Geltender Plan seit ${fmtDate(plan.since)}`} · Öffnung Mo–Fr {fmt(open)}–{fmt(close)} · gedruckt am{' '}
+          {fmtDate(new Date().toISOString())}
         </div>
       </div>
       <div className="pr-legend">
@@ -41,7 +47,11 @@ export function PrintView({ data }: { data: AppData }) {
         const { span, pct, ticks } = scale(d);
         return (
         <div className="pr-day" key={d}>
-          <h2>{d}</h2>
+          <h2>{w ? `${d} ${fmtDatum(w.dates[d])}` : d}</h2>
+          {w?.geschlossen[d] ? (
+            <p className="pr-closed">Kita geschlossen: {w.geschlossen[d]!.name}</p>
+          ) : (
+          <>
           <div className="pr-row">
             <div />
             <div className="pr-ticks">
@@ -58,6 +68,16 @@ export function PrintView({ data }: { data: AppData }) {
                     {i === 0 && <span style={{ fontWeight: 400, color: 'var(--text-3)' }}> · {group.name}</span>}
                   </div>
                   <div className="pr-lane">
+                    {(w?.abwesend[d][p.id] ?? []).map((a) => {
+                      const ganz = istGanztaegig(a);
+                      const st = ganz ? open : a.start!;
+                      const en = ganz ? close : a.end!;
+                      return (
+                        <div key={a.id} className="blk pr-abs" style={{ left: `${pct(st)}%`, width: `${((en - st) / span) * 100}%` }}>
+                          <span className="blk-label"><span>{ABWESENHEIT_LABEL[a.art]}{ganz ? '' : ` ${fmtShort(st)}–${fmtShort(en)}`}</span></span>
+                        </div>
+                      );
+                    })}
                     {bl.map((b) => (
                       <div
                         key={b.id}
@@ -68,13 +88,17 @@ export function PrintView({ data }: { data: AppData }) {
                           ...(b.type === 'betreuung' ? { background: groupColor(data.groups, group.id).s, borderColor: groupColor(data.groups, group.id).c } : {}),
                         }}
                       >
-                        <span className="blk-label"><span>{b.end - b.start >= 1 ? `${fmtShort(b.start)}–${fmtShort(b.end)}` : ''}</span></span>
+                        <span className={`blk-label${b.type === 'besprechung' || b.type === 'anleitung' || b.type === 'verfuegung' ? ' on-pattern' : ''}`}>
+                          <span>{b.end - b.start >= 1 ? `${fmtShort(b.start)}–${fmtShort(b.end)}` : ''}</span>
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
               );
             }),
+          )}
+          </>
           )}
         </div>
         );
@@ -97,11 +121,17 @@ export function PrintView({ data }: { data: AppData }) {
             {weekTable(groups.flatMap((g) => g.members), plan).map((r) => (
               <tr key={r.person.id}>
                 <td><strong>{r.person.name}</strong></td>
-                {r.cells.map((c, i) => (c ? <td key={i}>{fmt(c.start)}–{fmt(c.end)}</td> : <td key={i} className="off">—</td>))}
+                {r.cells.map((c, i) => {
+                  const d = DAYS[i];
+                  if (w?.geschlossen[d]) return <td key={i} className="off">geschlossen</td>;
+                  const abw = w?.abwesend[d][r.person.id]?.find(istGanztaegig);
+                  if (abw) return <td key={i} className="off">{ABWESENHEIT_LABEL[abw.art]}</td>;
+                  return c ? <td key={i}>{fmt(c.start)}–{fmt(c.end)}</td> : <td key={i} className="off">—</td>;
+                })}
                 <td>{dienstTage(r.person, plan, data.settings, 'frueh').length}</td>
                 <td>{dienstTage(r.person, plan, data.settings, 'spaet').length}</td>
-                <td className="strong">{fmtDecimal(r.ist, 1)}</td>
-                <td>{r.person.soll}</td>
+                <td className="strong">{fmtHours(r.ist)}</td>
+                <td>{fmtHours(r.person.soll)}</td>
               </tr>
             ))}
           </tbody>

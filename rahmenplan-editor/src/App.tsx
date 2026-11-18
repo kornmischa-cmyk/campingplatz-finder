@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Day, Variant } from './domain/types';
-import { planToCsv } from './domain/csv';
+import { planToCsv, wocheToCsv } from './domain/csv';
 import { emptyData, seedData } from './domain/seed';
 import { parseBackup, toBackup } from './domain/storage';
 import { fmtShort } from './domain/time';
@@ -13,6 +13,7 @@ import { dateStamp, daysSince, downloadText, fmtDate } from './lib/download';
 import { PlanView } from './components/PlanView';
 import { PersonalView } from './components/PersonalView';
 import { WeekView } from './components/WeekView';
+import { isoDate, kalenderwoche, mondayOf } from './domain/abwesenheit';
 import { ProfileDrawer } from './components/ProfileDrawer';
 import { SettingsView } from './components/SettingsView';
 import { PrintView } from './components/PrintView';
@@ -51,6 +52,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
   const [view, setView] = useState<View>('plan');
   const [variant, setVariant] = useState<Variant>(data.plans.test ? 'test' : 'geltend');
   const [day, setDay] = useState<Day>('Di');
+  const [weekMonday, setWeekMonday] = useState(() => mondayOf(isoDate(new Date())));
   const [profile, setProfile] = useState<{ initial: Person; isNew: boolean } | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
@@ -158,6 +160,11 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
     setToast('Kopie der Daten wurde heruntergeladen.');
   };
   const exportCsv = () => {
+    if (view === 'woche') {
+      downloadText(`wochenplan-kw${kalenderwoche(weekMonday)}-${weekMonday}-${slug}.csv`, wocheToCsv(data, weekMonday), 'text/csv;charset=utf-8');
+      setToast(`CSV der KW ${kalenderwoche(weekMonday)} wurde heruntergeladen.`);
+      return;
+    }
     downloadText(`rahmenplan-${slug}-${dateStamp()}.csv`, planToCsv(data), 'text/csv;charset=utf-8');
     setToast('CSV des geltenden Plans wurde heruntergeladen.');
   };
@@ -245,9 +252,17 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
                 </button>
               </div>
               <span className="head-sep" aria-hidden="true" />
-              <div className="tools" role="group" aria-label="Geltenden Plan teilen">
-                <button className="pill sm" onClick={print} title="Druckt den geltenden Plan (oder speichert ihn als PDF)">Drucken / PDF</button>
-                <button className="pill sm" onClick={exportCsv} title="Geltenden Plan als Tabelle für Excel herunterladen">CSV (Excel)</button>
+              <div className="tools" role="group" aria-label={view === 'woche' ? 'Woche drucken oder exportieren' : 'Geltenden Plan drucken oder exportieren'}>
+                <button
+                  className="pill sm"
+                  onClick={print}
+                  title={view === 'woche' ? `Druckt KW ${kalenderwoche(weekMonday)} mit Abwesenheiten – im Druckdialog „Als PDF speichern“ wählen` : 'Druckt den geltenden Rahmenplan – im Druckdialog „Als PDF speichern“ wählen'}
+                >
+                  Drucken / PDF
+                </button>
+                <button className="pill sm" onClick={exportCsv} title={view === 'woche' ? 'Diese Woche als Tabelle für Excel' : 'Geltenden Rahmenplan als Tabelle für Excel'}>
+                  CSV (Excel)
+                </button>
               </div>
             </div>
             <nav className="seg" aria-label="Ansicht">
@@ -314,7 +329,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               onBackup={backup}
             />
           )}
-          {view === 'woche' && <WeekView data={data} dispatch={dispatch} confirm={setConfirmReq} onOpenProfile={openProfile} notify={setToast} />}
+          {view === 'woche' && <WeekView data={data} dispatch={dispatch} confirm={setConfirmReq} onOpenProfile={openProfile} notify={setToast} monday={weekMonday} setMonday={setWeekMonday} />}
           {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} onNewPerson={newPerson} />}
           {view === 'settings' && (
             <SettingsView
@@ -348,7 +363,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
       )}
       <ConfirmDialog req={confirmReq} onClose={() => setConfirmReq(null)} />
       {toast && <div className="toast" role="status">{toast}</div>}
-      <PrintView data={data} />
+      <PrintView data={data} week={view === 'woche' ? weekMonday : undefined} />
     </>
   );
 }

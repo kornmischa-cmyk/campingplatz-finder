@@ -19,6 +19,19 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Schließzeiten, Feiertage, Druck/CSV der Woche (18.11.2026)
+
+- **Schließzeiten** in den Einstellungen (Bezeichnung, von–bis mit Datum), z. B. Sommer- oder Weihnachtsschließung, Brückentage.
+- **Gesetzliche Feiertage Hessen** automatisch (Neujahr, Karfreitag, Ostermontag, 1. Mai, Himmelfahrt, Pfingstmontag,
+  Fronleichnam, 3. Oktober, 25./26.12.; Ostern nach Gauß), abschaltbar; Vorschau der nächsten Feiertage.
+  Heiligabend/Silvester sind keine Feiertage → bei Bedarf als Schließzeit.
+- An geschlossenen Tagen ist in der Woche niemand eingeplant, keine Regelprüfung; Tageskarte „geschlossen“ mit Grund.
+  Der Rahmenplan (Musterwoche) bleibt davon unberührt.
+- **Drucken / PDF und CSV im Kopf sind kontextabhängig:** in „Woche“ wird die angezeigte KW gedruckt bzw. exportiert
+  (Datum je Tag, Abwesenheiten, geschlossene Tage, Wochenübersicht), sonst der geltende Rahmenplan. PDF über den Druckdialog
+  („Als PDF speichern“). Notizen zu Abwesenheiten werden nicht exportiert (Datensparsamkeit).
+- Vertretung: vorerst nicht als eigene Funktion – fehlende Besetzung zeigt die Woche, umgeplant wird im Rahmenplan.
+
 ## Abwesenheiten und Wochenansicht (18.11.2026)
 
 - Neue Ansicht **„Woche“**: Kalenderwoche wählen (‹ KW 47 ›, „Zur aktuellen Woche“). Grundlage ist der **geltende** Rahmenplan;
