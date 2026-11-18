@@ -705,7 +705,7 @@ export function PlanView({ data, dispatch, variant, setVariant, day, setDay, onO
 
       <p className="footnote">
         Fachkraft ist, wer im Personalprofil als „zählt als Fachkraft“ markiert ist; PiVA-Auszubildende sind in den Beispieldaten nicht markiert. Die
-        Leitung ist Reserve und steht nicht im Plan. Krankheit und Urlaub gehören in die konkrete Woche, nicht in den Rahmenplan. Die Regeln sind
+        Leitung ist Reserve und steht nicht im Plan. Krankheit, Urlaub und Fortbildung trägst du unter „Woche“ ein, nicht im Rahmenplan. Die Regeln sind
         beispielhaft und in den Einstellungen anpassbar; sie ersetzen keine fachliche oder rechtliche Prüfung.
       </p>
     </>

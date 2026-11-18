@@ -124,6 +124,7 @@ export function seedData(now = new Date().toISOString()): AppData {
     groups: GROUPS.map((g) => ({ ...g })),
     persons,
     termine,
+    abwesenheiten: [],
     plans: { geltend, test },
     meta: { lastBackup: null, beispieldaten: true },
   };
@@ -136,6 +137,7 @@ export function emptyData(now = new Date().toISOString()): AppData {
     groups: [{ id: 'g1', name: 'Gruppe 1', kinder: 0, alter: '' }],
     persons: [],
     termine: [],
+    abwesenheiten: [],
     plans: { geltend: { blocks: {}, since: now }, test: null },
     meta: { lastBackup: null, beispieldaten: false },
   };

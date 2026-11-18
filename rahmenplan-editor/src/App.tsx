@@ -12,13 +12,14 @@ import type { Backend } from './lib/fileStore';
 import { dateStamp, daysSince, downloadText, fmtDate } from './lib/download';
 import { PlanView } from './components/PlanView';
 import { PersonalView } from './components/PersonalView';
+import { WeekView } from './components/WeekView';
 import { ProfileDrawer } from './components/ProfileDrawer';
 import { SettingsView } from './components/SettingsView';
 import { PrintView } from './components/PrintView';
 import { ConfirmDialog, type ConfirmRequest } from './components/ConfirmDialog';
 import { RedoIcon, UndoIcon } from './components/Icons';
 
-type View = 'plan' | 'personal' | 'settings';
+type View = 'plan' | 'woche' | 'personal' | 'settings';
 const BACKUP_REMIND_DAYS = 7;
 
 interface Props {
@@ -251,6 +252,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
             </div>
             <nav className="seg" aria-label="Ansicht">
               <button aria-pressed={view === 'plan'} onClick={() => setView('plan')}>Rahmenplan</button>
+              <button aria-pressed={view === 'woche'} onClick={() => setView('woche')}>Woche</button>
               <button aria-pressed={view === 'personal'} onClick={() => setView('personal')}>Personal</button>
               <button aria-pressed={view === 'settings'} onClick={() => setView('settings')}>Einstellungen</button>
             </nav>
@@ -312,6 +314,7 @@ export function App({ initial, backend, startInfo, onChangeStorage }: Props) {
               onBackup={backup}
             />
           )}
+          {view === 'woche' && <WeekView data={data} dispatch={dispatch} confirm={setConfirmReq} onOpenProfile={openProfile} notify={setToast} />}
           {view === 'personal' && <PersonalView data={data} dispatch={dispatch} onOpenProfile={openProfile} onNewPerson={newPerson} />}
           {view === 'settings' && (
             <SettingsView

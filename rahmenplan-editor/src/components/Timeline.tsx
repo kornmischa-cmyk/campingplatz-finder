@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
-import type { AppData, Block, Day, Plan, Variant } from '../domain/types';
+import type { Abwesenheit, AppData, Block, Day, Plan, Variant } from '../domain/types';
+import { ABWESENHEIT_LABEL } from '../domain/types';
+import { istGanztaegig } from '../domain/abwesenheit';
 import { DAYS, TYPE_LABEL } from '../domain/types';
 import { applyDrag, canDrag, isLocked, planDrag, pxToDelta, type DragMode, type DragPlan } from '../domain/drag';
 import { blocksOf } from '../domain/plan';
@@ -42,6 +44,12 @@ interface Props {
   flash?: Flash | null;
   /** Sichtbarer Zeitraum (Öffnungszeit, ggf. erweitert um Termine davor/danach) */
   view: { v0: number; v1: number };
+  /** Konkrete Woche: Abwesenheiten dieses Tages je Person */
+  abwesend?: Record<string, Abwesenheit[]>;
+  /** Konkrete Woche: Tage, an denen die Person (ganztägig) abwesend ist – für die Wochenpunkte */
+  wocheAbwesend?: Record<string, Day[]>;
+  /** Stundenzähler ausblenden (konkrete Woche) */
+  hideSoll?: boolean;
 }
 
 interface DragState {
@@ -92,7 +100,7 @@ export function blockLabel(b: Block, px: number): string {
   const short = `${fmtShort(b.start)}–${fmtShort(b.end)}`;
   const st = fmtShort(b.start);
   const k = SHORT_TYPE[b.type];
-  const pad = PATTERNED.has(b.type) ? 12 : 0;
+  const pad = PATTERNED.has(b.type) ? 12 : b.type === 'pause' ? 10 : 0;
   const cands =
     b.type === 'betreuung'
       ? [full, short, st]
@@ -103,7 +111,7 @@ export function blockLabel(b: Block, px: number): string {
   return cands.find((c) => px >= c.length * CH + pad) ?? '';
 }
 
-export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay, flash, view }: Props) {
+export function Timeline({ data, plan, variant, day, result, selected, onSelect, dispatch, onOpenProfile, personFindings, renderActions, onDay, flash, view, abwesend, wocheAbwesend, hideSoll }: Props) {
   const [openBadge, setOpenBadge] = useState<string | null>(null);
   useEffect(() => {
     if (!openBadge) return;
@@ -268,6 +276,7 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
           <span><i className="wd wd-plan" /> geplant</span>
           <span><i className="wd wd-missing" /> fehlt</span>
           <span><i className="wd wd-off" /> frei</span>
+          {wocheAbwesend && <span><i className="wd wd-abs" /> abwesend</span>}
         </div>
         <div className="ticks" ref={measureRef} aria-hidden="true">
           {ticks.map((h) => (
@@ -362,11 +371,14 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
               const week = DAYS.map((d) => {
                 const bl = blocksOf(plan, p.id, d);
                 const soll = p.workdays.includes(d);
-                const state = bl.length ? (soll ? 'plan' : 'extra') : soll ? 'missing' : 'off';
+                const abs = wocheAbwesend?.[p.id]?.includes(d);
+                const state = abs ? 'abs' : bl.length ? (soll ? 'plan' : 'extra') : soll ? 'missing' : 'off';
                 const text =
                   state === 'plan' || state === 'extra'
                     ? `${d}: ${fmt(Math.min(...bl.map((b) => b.start)))}–${fmt(Math.max(...bl.map((b) => b.end)))}, ${fmtDuration(workHours(bl))} h${state === 'extra' ? ' (laut Profil kein Arbeitstag)' : ''}`
-                    : state === 'missing'
+                    : state === 'abs'
+                      ? `${d}: abwesend`
+                      : state === 'missing'
                       ? `${d}: Arbeitstag, noch nicht eingeplant`
                       : `${d}: frei`;
                 return { d, state, text };
@@ -412,12 +424,14 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                         })()}
                       </div>
                       <div className={`soll soll-${sd.tone}`} title={meta}>
+                        {!hideSoll && (
                         <span className="soll-line" aria-hidden="true">
                           <span className="soll-num">
                             {fmtHours(ist)} / {fmtHours(p.soll)} h
                           </span>
                           <span className="soll-diff">{sd.chip}</span>
                         </span>
+                        )}
                         <span className="soll-days" aria-hidden="true">
                           {week.map((w) => (
                             <span
@@ -470,6 +484,24 @@ export function Timeline({ data, plan, variant, day, result, selected, onSelect,
                         + Zeitfenster
                       </button>
                     )}
+                    {(abwesend?.[p.id] ?? []).map((a) => {
+                      const ganz = istGanztaegig(a);
+                      const st = ganz ? open : a.start!;
+                      const en = ganz ? close : a.end!;
+                      const text = `${ABWESENHEIT_LABEL[a.art]}${ganz ? '' : ` ${fmt(st)}–${fmt(en)}`}${a.notiz ? ` · ${a.notiz}` : ''}`;
+                      return (
+                        <div
+                          key={a.id}
+                          className={`abs-block abs-${a.art}${ganz ? ' ganz' : ''}`}
+                          role="img"
+                          aria-label={`${p.name}: ${text}`}
+                          title={`${p.name}: ${text}`}
+                          style={{ left: `calc(${pct(st)}% + 1px)`, width: `calc(${((en - st) / span) * 100}% - 2px)` }}
+                        >
+                          <span>{text}</span>
+                        </div>
+                      );
+                    })}
                     {blocks.map((b, idx) => {
                       const draggable = canDrag(b, variant);
                       const editable = canEdit(b, variant);

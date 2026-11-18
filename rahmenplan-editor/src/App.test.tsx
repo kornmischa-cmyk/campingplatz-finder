@@ -253,6 +253,29 @@ describe('App (Smoke)', () => {
     expect(screen.getByRole('button', { name: 'Testfassung' })).toBeTruthy();
   });
 
+  it('Woche: Abwesenheit mit Datum eintragen, Person fällt an dem Tag aus, Krank ohne Notiz', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'Woche' }));
+    expect(screen.getByRole('heading', { name: /^KW \d+/ })).toBeTruthy();
+    // Montag der angezeigten Woche wählen (Tina arbeitet laut Beispiel montags)
+    fireEvent.click(screen.getByRole('button', { name: /^Montag, / }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Abwesenheit eintragen' }));
+    const form = screen.getByRole('form', { name: 'Abwesenheit eintragen' });
+    fireEvent.change(within(form).getByLabelText('Person'), { target: { value: 'tina' } });
+    fireEvent.change(within(form).getByLabelText('Art'), { target: { value: 'krank' } });
+    expect(within(form).queryByLabelText('Notiz (optional)')).toBeNull();
+    expect(within(form).getByText(/keine Gründe gespeichert/)).toBeTruthy();
+    fireEvent.click(within(form).getByRole('button', { name: 'Abwesenheit speichern' }));
+    // Tina ist am gewählten Tag als krank markiert und hat keine Dienstblöcke mehr
+    expect(screen.getByRole('img', { name: 'Tina: Krank' })).toBeTruthy();
+    expect(screen.queryAllByRole('img', { name: /^Tina, Betreuung/ })).toHaveLength(0);
+    expect(screen.getAllByText(/1 abwesend/).length).toBeGreaterThan(0);
+    // Rahmenplan bleibt unverändert
+    fireEvent.click(screen.getByRole('button', { name: 'Rahmenplan' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Mo: / }));
+    expect(screen.getAllByRole('button', { name: /^Tina, Betreuung/ }).length).toBeGreaterThan(0);
+  });
+
   it('Korrektur „arbeitet montags nicht“: Testfassung und auf Wunsch auch geltender Plan', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'Personal' }));

@@ -32,6 +32,7 @@ Beim nächsten Start reicht „Weiter mit …“ – der Browser fragt dann einm
   Neues Zeitfenster durch Ziehen auf eine freie Stelle der Zeile; Auswahlleiste: Art ändern, Pause einziehen, Zeitfenster danach, Löschen.
   Tastatur: `←/→` verschieben, `Alt+←/→` Beginn, `Umschalt+←/→` Ende, `Entf` löschen, `Esc` Auswahl aufheben.
 - **Harte Zeiten** (im Profil „hart“): gesperrt, in der Testfassung bewusst entsperrbar; eine Abweichung bleibt als Hinweis stehen.
+- **Woche**: konkrete Kalenderwoche mit Abwesenheiten (Urlaub, Krank, Fortbildung, Sonstiges; von–bis, optional nur zeitweise) und Regelprüfung der echten Besetzung.
 - **Personal**: Profile mit Qualifikation, Fachkraft-Status, Gruppe, Soll-Stunden, Arbeitstagen, Normalarbeitszeiten,
   Dienstag-Sonderfall, Praxisanleitung, Bemerkungen. Personen anlegen/entfernen.
 - **Einstellungen**: Kita, Öffnungszeit, Gruppen, Regelwerte (Fachkräfte, Randzeiten, Pausenstaffel, …), Daten.

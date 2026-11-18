@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { isoDate } from '../domain/abwesenheit';
+import { abwesenheitText } from './WeekView';
 import { CloseIcon } from './Icons';
 import type { AppData, Block, Day, DienstArt, DienstVorgabe, Person, Settings } from '../domain/types';
 import { BLOCK_TYPES, DAYS, TYPE_LABEL } from '../domain/types';
@@ -371,6 +373,24 @@ export function ProfileDrawer({ data, initial, isNew, dispatch, onSave, onClose,
           <label className="field-label" htmlFor={`${fid}-notiz`}>Bemerkungen</label>
           <textarea id={`${fid}-notiz`} className="input" rows={4} style={{ resize: 'vertical' }} value={person.notiz} onChange={(e) => upd({ notiz: e.target.value })} />
         </div>
+
+        {!isNew && (
+          <div className="drawer-section">
+            <h3 className="field-label" style={{ fontSize: 13 }}>Abwesenheiten</h3>
+            {(() => {
+              const heute = isoDate(new Date());
+              const l = data.abwesenheiten.filter((x) => x.personId === person.id && x.bis >= heute).sort((x, y) => x.von.localeCompare(y.von));
+              return l.length ? (
+                <ul className="drawer-abw">
+                  {l.map((x) => <li key={x.id}>{abwesenheitText(x)}{x.notiz ? ` · ${x.notiz}` : ''}</li>)}
+                </ul>
+              ) : (
+                <p className="hint" style={{ margin: '0 0 8px' }}>Keine aktuellen oder geplanten.</p>
+              );
+            })()}
+            <p className="hint" style={{ margin: 0 }}>Eintragen und ändern unter „Woche“ – dort siehst du gleich, wie sich die Besetzung ändert.</p>
+          </div>
+        )}
 
         {!isNew && (
           <div className="drawer-section">

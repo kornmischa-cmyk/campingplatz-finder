@@ -3,7 +3,7 @@ import type { AppData, Block, Day, Group, Person, Settings } from '../domain/typ
 import { DAYS } from '../domain/types';
 import { adoptTest, applyProfileToPlan, blocksOf, clonePlan, insertTermin, profileChanges, sameDay, templateFor, withDayBlocks } from '../domain/plan';
 import { withAutoPause } from '../domain/pause';
-import type { Termin } from '../domain/types';
+import type { Abwesenheit, Termin } from '../domain/types';
 import { parseBackup, toBackup } from '../domain/storage';
 import type { Backend } from '../lib/fileStore';
 import { uid } from '../domain/time';
@@ -23,6 +23,10 @@ export type Action =
   | { type: 'insertPause'; personId: string; day: Day }
   | { type: 'saveTermin'; termin: Termin }
   | { type: 'deleteTermin'; id: string }
+  | { type: 'saveAbwesenheit'; abwesenheit: Abwesenheit }
+  | { type: 'deleteAbwesenheit'; id: string }
+  /** Abwesenheiten löschen, die vor diesem Datum enden (Datensparsamkeit) */
+  | { type: 'purgeAbwesenheiten'; vor: string }
   | { type: 'createTest' }
   | { type: 'discardTest' }
   | { type: 'adoptTest' }
@@ -51,6 +55,7 @@ export function reducer(state: AppData, a: Action): AppData {
       return {
         ...state,
         persons: state.persons.filter((p) => p.id !== a.id).map((p) => (p.mentorId === a.id ? { ...p, mentorId: '' } : p)),
+        abwesenheiten: state.abwesenheiten.filter((x) => x.personId !== a.id),
         plans: { geltend: strip(state.plans.geltend), test: state.plans.test && strip(state.plans.test) },
       };
     }
@@ -137,6 +142,17 @@ export function reducer(state: AppData, a: Action): AppData {
       }
       return { ...next, plans: { ...state.plans, test } };
     }
+    case 'saveAbwesenheit': {
+      // Bei Krankheit keine Notiz speichern (Gesundheitsdaten)
+      const neu: Abwesenheit = a.abwesenheit.art === 'krank' ? { ...a.abwesenheit, notiz: undefined } : a.abwesenheit;
+      return state.abwesenheiten.some((x) => x.id === neu.id)
+        ? { ...state, abwesenheiten: state.abwesenheiten.map((x) => (x.id === neu.id ? neu : x)) }
+        : { ...state, abwesenheiten: [...state.abwesenheiten, neu] };
+    }
+    case 'deleteAbwesenheit':
+      return { ...state, abwesenheiten: state.abwesenheiten.filter((x) => x.id !== a.id) };
+    case 'purgeAbwesenheiten':
+      return { ...state, abwesenheiten: state.abwesenheiten.filter((x) => x.bis >= a.vor) };
     case 'createTest':
       if (state.plans.test) return state;
       return { ...state, plans: { ...state.plans, test: clonePlan(state.plans.geltend, now()) } };

@@ -19,6 +19,20 @@ Stand: 23.09.2026. Grundlage: Design-Handoff in `design-handoff/`.
 | Regeln | Schwellenwerte konfigurierbar (Einstellungen), Startwerte aus dem Prototyp |
 | Datenmodell | Stabile Block-IDs statt Index. Rahmenplan als Vorlage, aus der später eine datierte „konkrete Woche“ abgeleitet werden kann |
 
+## Abwesenheiten und Wochenansicht (18.11.2026)
+
+- Neue Ansicht **„Woche“**: Kalenderwoche wählen (‹ KW 47 ›, „Zur aktuellen Woche“). Grundlage ist der **geltende** Rahmenplan;
+  Abwesenheiten werden für die konkreten Tage herausgerechnet. Der Rahmenplan selbst bleibt unverändert.
+- **Abwesenheit** je Person mit festem Datum von–bis (einschließlich), Art **Urlaub, Krank, Fortbildung, Sonstiges (abwesend)**,
+  bei eintägigen Abwesenheiten optional nur zeitweise (z. B. Fortbildung 9–12 Uhr); der Rest des Dienstes bleibt.
+- Regeln (Fachkraft, Randzeiten, Pausen …) prüfen die echte Besetzung der Woche; Abweichungen vom Profil werden dort nicht gemeldet.
+  Tageskarten zeigen Datum, „heute“ und „n abwesend“; Zeitleiste zeigt Abwesenheiten als gestrichelte, neutrale Fläche;
+  Wochenpunkte haben den Zustand „abwesend“. Der Stundenzähler ist in der Woche ausgeblendet (Urlaub ist kein fehlendes Soll).
+- **Datenschutz:** Bei „Krank“ gibt es kein Notizfeld (auch beim Import wird eine Notiz verworfen); neutrale Farbe.
+  „Vergangene löschen“ entfernt alle Einträge, die vor heute geendet haben. Mit Träger/Leitung klären, wie lange Einträge bleiben dürfen.
+- Im Profil: Liste der aktuellen/geplanten Abwesenheiten (nur lesen), Eintragen unter „Woche“.
+- Noch offen: Feiertage/Schließtage, Druck/CSV der konkreten Woche, Vertretungsplanung (wer springt ein).
+
 ## Abendtermine, Zähler, Auswahllisten (18.11.2026)
 
 - **Termine 6:00–22:00:** wählbar auch außerhalb der Öffnungszeit (Hinweis im Formular). An Tagen mit solchen Terminen

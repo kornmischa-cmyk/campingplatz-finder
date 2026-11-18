@@ -1,5 +1,5 @@
 // Persistenz im localStorage + Prüfung von importierten Sicherungsdateien.
-import type { AppData, Block, Day, Person, Plan, Termin, TerminTyp } from './types';
+import type { AppData, Block, Day, Person, Plan, Termin, TerminTyp, Abwesenheit } from './types';
 import { BLOCK_TYPES, DAYS, TYPE_LABEL } from './types';
 import { defaultSettings } from './seed';
 
@@ -115,6 +115,19 @@ export function parseBackup(text: string): AppData | string {
       if (t.teilnehmer !== 'alle' && !(Array.isArray(t.teilnehmer) && t.teilnehmer.every(isStr))) return 'Teilnehmende eines Termins sind beschädigt.';
     }
   }
+  const abwesenheiten: Abwesenheit[] = [];
+  if (obj.abwesenheiten !== undefined) {
+    if (!Array.isArray(obj.abwesenheiten)) return 'Abwesenheiten sind beschädigt.';
+    const isDate = (x: unknown) => isStr(x) && /^\d{4}-\d{2}-\d{2}$/.test(x);
+    for (const a of obj.abwesenheiten) {
+      if (!isObj(a) || !isStr(a.id) || !isStr(a.personId) || !isDate(a.von) || !isDate(a.bis) || !['urlaub', 'krank', 'fortbildung', 'sonstiges'].includes(a.art as string))
+        return 'Eine Abwesenheit ist beschädigt.';
+      if ((a.start !== undefined && !isNum(a.start)) || (a.end !== undefined && !isNum(a.end))) return 'Uhrzeit einer Abwesenheit ist beschädigt.';
+      const x = a as unknown as Abwesenheit;
+      // Bei Krankheit wird keine Notiz gespeichert (Datenschutz)
+      abwesenheiten.push(x.art === 'krank' ? { ...x, notiz: undefined } : x);
+    }
+  }
   const meta = isObj(obj.meta) ? obj.meta : {};
   const migrated = migrateTueBlocks(obj.persons as Person[], (obj.termine as Termin[] | undefined) ?? []);
   return {
@@ -124,6 +137,7 @@ export function parseBackup(text: string): AppData | string {
     groups: obj.groups as AppData['groups'],
     persons: migrated.persons,
     termine: migrated.termine,
+    abwesenheiten,
     plans: { geltend: obj.plans.geltend as Plan, test: obj.plans.test as Plan | null },
     meta: {
       lastBackup: isStr(meta.lastBackup) ? meta.lastBackup : null,

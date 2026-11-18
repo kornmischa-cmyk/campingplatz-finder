@@ -115,7 +115,12 @@ export interface DayResult {
   counts: { v: number; h: number; i: number };
 }
 
-export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: Settings, termine: Termin[] = []): DayResult {
+export interface EvalOptions {
+  /** Konkrete Woche: Abweichungen vom Profil nicht melden (Abwesenheiten verändern den Tag bewusst) */
+  ohneAbweichung?: boolean;
+}
+
+export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: Settings, termine: Termin[] = [], opts: EvalOptions = {}): DayResult {
   const slots = computeSlots(persons, plan, day, settings);
   const L: Finding[] = [];
 
@@ -186,6 +191,7 @@ export function evaluateDay(persons: Person[], plan: Plan, day: Day, settings: S
 
     L.push(...dienstTagFindings(p, bl, day, settings));
 
+    if (opts.ohneAbweichung) continue;
     const hardTermin = dev.hardChanged.filter(isTerminBlock);
     const hardOther = dev.hardChanged.filter((b) => !isTerminBlock(b));
     for (const hb of hardOther) {

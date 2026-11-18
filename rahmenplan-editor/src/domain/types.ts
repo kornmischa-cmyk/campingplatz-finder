@@ -115,12 +115,37 @@ export interface Termin {
   teilnehmer: 'alle' | string[];
 }
 
+/** Art einer Abwesenheit (bei „krank“ bewusst ohne Notiz – keine Gesundheitsdaten in der Plandatei) */
+export type AbwesenheitArt = 'urlaub' | 'krank' | 'fortbildung' | 'sonstiges';
+
+export const ABWESENHEIT_LABEL: Record<AbwesenheitArt, string> = {
+  urlaub: 'Urlaub',
+  krank: 'Krank',
+  fortbildung: 'Fortbildung',
+  sonstiges: 'Abwesend',
+};
+
+/** Abwesenheit mit festem Datum (ISO „JJJJ-MM-TT“, beide Tage einschließlich) */
+export interface Abwesenheit {
+  id: string;
+  personId: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  /** nur bei eintägiger Abwesenheit: Uhrzeit von–bis (sonst ganztägig) */
+  start?: number;
+  end?: number;
+  notiz?: string;
+}
+
 export interface AppData {
   version: 1;
   settings: Settings;
   groups: Group[];
   persons: Person[];
   termine: Termin[];
+  /** Abwesenheiten mit Datum (Urlaub, Krank, Fortbildung …) – wirken in der Wochenansicht */
+  abwesenheiten: Abwesenheit[];
   plans: { geltend: Plan; test: Plan | null };
   meta: { lastBackup: string | null; beispieldaten: boolean };
 }
